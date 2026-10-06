@@ -115,6 +115,7 @@ forest_radar/
   README.md
   PLAN.md
   GLOSSARY.md
+  LICENSE
 ```
 
 ## Dependencies

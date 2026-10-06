@@ -54,3 +54,7 @@ This project uses three open pieces:
 3. Open local inference (Ollama).
 
 No cloud service is required. The location of the user stays on the machine of the user.
+
+## License
+
+MIT. See `LICENSE`.
