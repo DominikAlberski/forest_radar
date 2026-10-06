@@ -1,4 +1,4 @@
-# Leśny Radar — Glossary
+# Forest Radar — Glossary
 
 Domain terms only. Technical terms stay in the plan and the README.
 
@@ -44,6 +44,28 @@ A periodic ban on entering a forest. A district issues a ban for a fire risk or 
 **Zanocuj w lesie**
 A Polish program for legal overnight camping in a forest.
 
+## The mushroom question
+
+**Grzyboznawca**
+A certified mushroom expert. A grzyboznawca identifies a mushroom and issues an opinion.
+_Avoid_: mushroom expert
+
+**Klasyfikator grzybów**
+A certified mushroom classifier. A klasyfikator identifies the species of a fresh mushroom.
+
+**Porady grzybowe**
+The free mushroom identification service. The sanitary stations offer it on weekdays.
+_Avoid_: mushroom hotline
+
+**Sanepid**
+The Polish sanitary inspection. A Powiatowa or Wojewódzka Stacja Sanitarno-Epidemiologiczna holds a grzyboznawca.
+_Avoid_: sanitary office
+
+**Edibility claim**
+Any statement that a mushroom is safe to eat, or that a mushroom is poisonous.
+The model must never make an edibility claim. See `docs/decisions/0002-no-edibility-classification.md`.
+_Avoid_: safety call, mushroom verdict
+
 ## The program
 
 **Trip card**
@@ -58,5 +80,7 @@ A value that comes from BDL. The program can prove a hard fact.
 **Soft advice**
 A suggestion that comes from the model. The program cannot prove soft advice. The card marks it as a suggestion.
 
-**Candidate species**
-A plant or a mushroom that the model expects at the site. A candidate species is not a permission to eat it.
+**Possible species**
+A plant or a mushroom that the model expects at the site. A possible species is a name only.
+It carries no statement about edibility.
+_Avoid_: candidate species, edible mushroom

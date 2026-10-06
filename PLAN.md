@@ -1,4 +1,4 @@
-# Leśny Radar — Plan
+# Forest Radar — Plan
 
 ## Goal
 
@@ -8,9 +8,9 @@ A local open-weight model turns the data into a short Polish trip card.
 
 The screen is the shortest part of the experience. The output is one card. The person prints it or screenshots it and leaves.
 
-## What to build
+## Architecture
 
-One program with five parts.
+Sinatra. Ruby. One web process serves one page and one JSON endpoint.
 
 ```text
 Browser (one Polish page, printable card)
@@ -28,42 +28,36 @@ Ollama client    POST /api/chat → Bielik (Polish prompt, Polish answer)
 Card renderer    one printable Polish trip card
 ```
 
-## Architecture options (decide before implementation)
-
-### Option A — Ruby, standard library, local web page
-
-One Ruby process serves one HTML page and one JSON endpoint. The page uses the browser geolocation API. No gems at runtime.
-
-- Plus: matches the existing toolchain. Small. Easy to demo.
-- Plus: the whole app is one folder of small Ruby files.
-- Minus: no framework means hand-written routing and templating.
-
-### Option B — Ruby web application
-
-Sinatra or Rails. Conventional structure. More files.
-
-- Plus: familiar and fast to extend.
-- Minus: heavier for a five-day build. The extra structure adds no value to the demo.
-
-### Option C — Python
-
-Python for the data work, a small web layer on top.
-
-- Plus: the richest geo and data libraries.
-- Minus: splits the project across two languages for no gain here.
-
-**Recommendation: Option A.** The demo needs one page, one endpoint, and one model call. Ruby standard library holds all of it. The author is a Ruby developer. This matches the two earlier challenge projects.
+See `docs/decisions/0001-sinatra-over-stdlib.md` for why Sinatra, not the standard library.
 
 ## Components
 
 | Component | File (proposal) | Job |
 | --- | --- | --- |
-| Server | `lib/server.rb` | Serve the page and the JSON endpoint |
+| App | `lib/app.rb` | Sinatra routes. The page and the JSON endpoint. |
 | Geo | `lib/geo.rb` | Radius to bounding box. Point to RDLP region. |
 | BDL client | `lib/bdl.rb` | OGC API Features and WMS calls. Cache the answers. |
 | Assembler | `lib/assembler.rb` | Build the fact block from the raw features. |
 | Model client | `lib/model.rb` | Talk to Ollama. Hold the Polish prompt. |
-| Card | `lib/card.rb` | Render the Polish trip card |
+| Card | `lib/card.rb` | Shape the card data for the view. |
+| Sanepid link | `lib/sanepid.rb` | Build the Google Maps link to the nearest sanitary station. |
+
+## i18n
+
+Use the `i18n` gem. Sinatra exposes `t` in the views.
+
+```text
+config/locales/
+  pl.yml   # complete, the source of truth
+  en.yml   # same keys, empty values
+```
+
+Rules:
+
+- Add every user-facing string to `pl.yml` first.
+- Copy the key to `en.yml` with an empty value.
+- Never write a literal Polish string in a view or in Ruby code.
+- The Polish card title is `Leśny Radar`. The English value stays empty.
 
 ## API contract
 
@@ -72,9 +66,9 @@ Python for the data work, a small web layer on top.
 | Method | Path | Body | Returns |
 | --- | --- | --- | --- |
 | GET | `/` | — | The Polish page |
-| POST | `/api/card` | `{ "lat", "lon", "radius_km" }` | `{ "facts", "card" }` |
+| POST | `/api/card` | `{ "lat", "lon", "radius_km" }` | `{ "facts", "card", "sanepid_url" }` |
 
-The response holds two fields. `facts` is the raw forest data. `card` is the model text. Keep both. This shows the judges the data behind the prose.
+The response holds the raw facts and the model text apart. Keep both. This shows the reviewers the data behind the prose.
 
 ### The program calls
 
@@ -88,30 +82,53 @@ See `docs/data-sources.md` for every endpoint and a verified sample.
 ## Repo layout
 
 ```text
-lesny-radar/
+forest_radar/
+  Gemfile
+  config.ru
   lib/
-    server.rb
+    app.rb
     geo.rb
     bdl.rb
     assembler.rb
     model.rb
     card.rb
+    sanepid.rb
+  views/
+    index.erb
+    card.erb
   public/
-    index.html
     card.css
   config/
     model.yml
+    locales/
+      pl.yml
+      en.yml
   test/
   docs/
     data-sources.md
     model-and-prompts.md
+    vision.md
     roadmap.md
     plans/mvp.md
     blog-outline.md
+    decisions/
   README.md
   PLAN.md
   GLOSSARY.md
 ```
+
+## Dependencies
+
+The `Gemfile` holds the gems below. The author approved these.
+
+| Gem | Use |
+| --- | --- |
+| `sinatra` | The web layer |
+| `i18n` | The Polish and English locales |
+| `rackup` | The rack server entry point |
+| `puma` | The web server |
+| `minitest` | The tests |
+| `rack-test` | The request tests |
 
 ## Scope — MVP
 
@@ -120,11 +137,13 @@ lesny-radar/
 3. The program reads the stands and the districts in the box. Green or Red.
 4. The program checks the entry ban layer for the box. Green or Red.
 5. The model returns a Polish trip card from the fact block. Green or Red.
-6. The card is printable and readable on a phone. Green or Red.
-7. The author takes the card outside and uses it. Green or Red.
+6. The card holds the mushroom warning and the sanitary station link. Green or Red.
+7. The card is printable and readable on a phone. Green or Red.
+8. The author takes the card outside and uses it. Green or Red.
 
 ## Deferred — plan only
 
+- Add the English translation. Fill `en.yml`.
 - Add a map raster from the BDL tourist WMS. Show the trails under the card.
 - Add "Zanocuj w lesie" camping areas as a filter.
 - Add a berry and mushroom season table per region.
@@ -134,10 +153,10 @@ lesny-radar/
 ## Pitfalls
 
 - **P1 — the entry ban layer is WMS only.** There is no clean JSON endpoint. Use `GetFeatureInfo`. Treat the answer as best effort. Say so in the card.
-- **P2 — the stand data is split by RDLP region.** Nineteen collections hold the stands. Pick the region by a point-in-polygon test against the `rdlp` collection. A radius can cross two regions.
+- **P2 — the stand data is split by RDLP region.** Seventeen collections hold the stands. Pick the region by a point-in-polygon test against the `rdlp` collection. A radius can cross two regions.
 - **P3 — the stand attributes use Polish forestry codes.** `species_cd` holds `SO` for pine. `site_type` holds `BMŚW` for a fresh mixed conifer site. The model can decode these. A small dictionary is more reliable for the hard facts.
 - **P4 — Ollama binds to localhost by default.** Set `OLLAMA_HOST=0.0.0.0` on the model host. Otherwise the app cannot reach it.
-- **P5 — foraging advice can harm a person.** Never state that a mushroom is safe to eat. See the safety rules in `docs/model-and-prompts.md`.
+- **P5 — the model must not judge a mushroom.** The model never says that a mushroom is edible or poisonous. The card carries a fixed warning and a link to the nearest sanitary station. See `docs/decisions/0002-no-edibility-classification.md`.
 - **P6 — the public service is shared.** Cache the answers. Send one request per session, not one per keystroke.
 - **P7 — the attributes have gaps.** Some stands have a null `species_cd`. State the gap. Do not invent the value.
 

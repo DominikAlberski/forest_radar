@@ -33,17 +33,26 @@ Each item is a check. The item passes or it fails. No partial credit.
 
 - The model returns Polish text. Pass or fail.
 - The model answer separates the facts from the advice. Pass or fail.
-- The model answer holds no claim that a mushroom is edible. Pass or fail.
+- The model answer holds none of the words `jadalny`, `niejadalny`, `trujący`. Pass or fail.
 - The model answers in under 30 seconds on the reference machine. Pass or fail.
 
-## M6 — The card
+## M6 — The mushroom section
+
+- The card holds the fixed mushroom warning from `pl.yml`. Pass or fail.
+- The warning tells the user not to pick a doubtful mushroom. Pass or fail.
+- The card holds a link to the nearest sanitary station. Pass or fail.
+- The link opens Google Maps, centred on the user location. Pass or fail.
+- The program holds no edibility data and no edibility lookup. Pass or fail.
+
+## M7 — The card
 
 - The card holds the three nearest forests with a distance. Pass or fail.
 - The card prints on one A4 page. Pass or fail.
 - The card is readable on a phone at 100 percent zoom. Pass or fail.
 - The card holds the data year and the safety warning. Pass or fail.
+- The card holds no hardcoded string. Every string comes from `pl.yml`. Pass or fail.
 
-## M7 — The field test
+## M8 — The field test
 
 - The author uses the card on a real walk. Pass or fail.
 - The author records the result: what matched, and what did not. Pass or fail.
@@ -56,16 +65,17 @@ Collect these for the DEV post:
 1. A screenshot of one full card.
 2. The fact block behind that card.
 3. The model answer for that card.
-4. The field notes from M7.
+4. The field notes from M8.
 5. At least one wrong model answer, with the reason.
 
 ## Definition of done for the submission
 
-Every item M1 to M7 is green. The repository holds a README that a stranger can follow. The blog post is published.
+Every item M1 to M8 is green. The repository holds a README that a stranger can follow. The blog post is published.
 
 ## Not in the MVP
 
 - No user accounts.
 - No database.
 - No map raster.
+- No English translation. The keys exist and the values are empty.
 - No deployment to a server. The app runs on the machine of the user.

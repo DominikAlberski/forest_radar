@@ -32,15 +32,18 @@ A closed foreign model would need a translation layer and would still guess at t
 
 This is the argument for open innovation. The open piece is not a cost saving. The open piece is what makes the product correct for the audience.
 
+## The mushroom stance
+
+A forest app usually offers to say which mushrooms are safe to eat. This app refuses. The model names possible species only. The card carries a warning and a link to the nearest sanitary station, where a grzyboznawca identifies the mushroom for free.
+
+This is a product decision with a clear reason: a wrong answer can kill a person. The app sends the user to a human expert instead of guessing.
+
 ## The voice
 
 Write the card in plain Polish. Do not use forestry jargon without a gloss. A user knows "sosna". A user does not know "drzewostan sosnowy w wieku 70 lat".
 
-## Working title alternatives
+## The name
 
-The folder name is `lesny-radar`. Other titles, if this one does not fit:
-
-- **DoLasu** — a plain call to action. Good for a blog title.
-- **Nazbierak** — points at foraging. Too narrow.
-
-Pick one before the first commit that adds a user-facing string.
+- Repository and package name: `forest_radar`.
+- The Polish card title, in `pl.yml`: `Leśny Radar`.
+- The English card title, in `en.yml`: empty, like every other English string.

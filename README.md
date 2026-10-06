@@ -1,10 +1,10 @@
-# Leśny Radar
+# Forest Radar
 
 A forest walk advisor for Poland. It finds forests near the user and says what to look for there.
 
 The user gives a location and a radius. The program asks the Bank Danych o Lasach for the forests in that radius. The program sends the findings to a local open-weight model. The model writes a short trip card in Polish: which forest, what grows there, what animals live there, and whether the entry rules allow a dog.
 
-The name is a working title. The folder is `lesny-radar`.
+The repository name is `forest_radar`.
 
 ## Stage
 
@@ -12,24 +12,36 @@ Specification only. There is no code yet.
 
 Read these files next:
 
-1. `PLAN.md` — what to build, the architecture options, and the open questions.
+1. `PLAN.md` — what to build, the architecture, and the open questions.
 2. `docs/data-sources.md` — the forest data. Every endpoint is verified.
-3. `docs/model-and-prompts.md` — the model choice and the prompt design.
+3. `docs/model-and-prompts.md` — the model choice, the prompts, and the safety rules.
 4. `docs/plans/mvp.md` — the acceptance criteria.
 5. `docs/roadmap.md` — the plan to the submission deadline.
 
 ## Language rule
 
-Write the documents and the code in English. Write the user interface and the model prompts in Polish. The users are Polish. The reviewers are international.
+The user interface uses i18n. The Polish locale is complete. The English locale exists with the same keys and empty values.
+
+- All user-facing strings live in `config/locales/pl.yml` and `config/locales/en.yml`.
+- Never hardcode a user-facing string in a view or in Ruby code.
+- The Polish locale is the source of truth. Add a key there first.
+- The English locale is a placeholder for a later translation. Leave the values empty.
+- Write the documents and the code comments in English.
 
 ## The two data questions
 
-The project has two kinds of output. Keep them apart.
+The project produces two kinds of output. Keep them apart.
 
 - **Hard facts.** These come from the Bank Danych o Lasach. Example: the stand at this point holds pine, 70 years old, on a fresh mixed conifer site.
 - **Soft advice.** These come from the model. Example: look for boletus and chanterelle here in October.
 
 Mark the second kind as a suggestion in the interface. See the safety rules in `docs/model-and-prompts.md`.
+
+## The mushroom rule
+
+The model must not classify a mushroom as edible or as poisonous. The card names possible species only. The mushroom section always carries a warning and a link to the nearest sanitary station.
+
+Read `docs/model-and-prompts.md` before you touch the mushroom section.
 
 ## Why this project
 

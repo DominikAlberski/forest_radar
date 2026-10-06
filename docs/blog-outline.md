@@ -14,6 +14,7 @@ The reviewing is weighted toward the writing. Plan the post before the code is f
 
 - "The Polish forest service publishes everything. I built a pilot for it."
 - "A Polish model, Polish forest data, and one card you take outside."
+- "My forest app refuses to tell you if a mushroom is edible."
 - "Touch grass with open data: finding the right forest walk in Poland."
 
 ## Thesis
@@ -35,7 +36,7 @@ Three open pieces meet: Polish open forest data, an open-weight Polish model, an
 ## Section 3 — Code
 
 - The GitHub repository.
-- Ruby standard library. No runtime gems.
+- Sinatra, a small Ruby web framework. The i18n setup: Polish complete, English empty.
 - The tests with the recorded fixture.
 
 ## Section 4 — How I Built It
@@ -45,7 +46,18 @@ Three open pieces meet: Polish open forest data, an open-weight Polish model, an
 - The prompt: the Polish system prompt. The fact block.
 - The two-model comparison: Bielik against Gemma on one fact block.
 
-## Section 5 — The honest limits (the part that worked last time)
+## Section 5 — The feature I removed on purpose
+
+This is a strong section. Lead with the decision, not the code.
+
+- A forest app usually offers an edibility answer. I removed that feature.
+- The reason: a wrong answer can kill a person.
+- Sanepid agrees. It advises against judging edibility by taste, and against judging it with an application.
+- The design instead: the model names possible species only. A test rejects the words `jadalny`, `niejadalny`, and `trujący`.
+- The card sends the user to a grzyboznawca at the nearest sanitary station. The check is free. The link opens Google Maps.
+- Show the raw model answer that first broke the rule, before the fix.
+
+## Section 6 — The honest limits (the part that worked last time)
 
 - The model invents mushroom names for the wrong site type. Show the raw answer.
 - The ban layer is WMS only. State the limit.
@@ -53,19 +65,19 @@ Three open pieces meet: Polish open forest data, an open-weight Polish model, an
 
 Write this section from the session log. Name each failure with the raw text.
 
-## Section 6 — Why Does Open Innovation Matter?
+## Section 7 — Why Does Open Innovation Matter?
 
 - The location of the user never leaves the machine. A closed cloud API would receive it.
 - The model is swappable. One line of config changes the engine.
 - No per-token cost. The hardware is already there.
 - The Polish model knows the Polish domain terms. A foreign closed model would guess.
 
-## Section 7 — My Agent Session
+## Section 8 — My Agent Session
 
 - Save the session with DevRelay. Embed it, or link to it.
 - Optional, but the judges like it.
 
-## Section 8 — Prize Categories
+## Section 9 — Prize Categories
 
 List every category that genuinely applies. Remove the section if none apply.
 
@@ -76,6 +88,7 @@ List every category that genuinely applies. Remove the section if none apply.
 - [ ] One full card screenshot
 - [ ] The fact block behind the card
 - [ ] Both model answers for one fact block
+- [ ] The raw answer that broke the mushroom rule, and the fix
 - [ ] The field notes from the real walk
 - [ ] At least one wrong model answer, with the raw text
 - [ ] The repository is public and the README works for a stranger
