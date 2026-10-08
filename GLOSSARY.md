@@ -62,23 +62,31 @@ The Polish sanitary inspection. A Powiatowa or Wojewódzka Stacja Sanitarno-Epid
 _Avoid_: sanitary office
 
 **Edibility claim**
-Any statement that a mushroom is safe to eat, or that a mushroom is poisonous.
-The model must never make an edibility claim. See `docs/decisions/0002-no-edibility-classification.md`.
+Any statement or implication that a mushroom is safe to eat or poisonous.
+The model and the program must never make an edibility claim in any output.
+See `docs/decisions/0002-no-edibility-classification.md`.
 _Avoid_: safety call, mushroom verdict
 
 ## The program
 
+**Forest walk area**
+A forest range selected for a walk, with a mapped walking trail crossing the range and no known entry ban.
+These listing signals do not prove permission to enter; the user must check current local access before the walk.
+_Avoid_: forest stand as destination, guaranteed access
+
 **Trip card**
-The Polish page that the user takes outside. The card holds the forests, the likely finds, and the entry rules.
+The Polish page that the user takes outside.
+The trip card shows forest walk areas, possible species, distances, and entry information.
 
 **Fact block**
-The structured forest data that the program collects. The program sends the fact block to the model.
+The structured forest data collected for a trip card. The program sends the fact block to the model.
 
 **Hard fact**
-A value that comes from BDL. The program can prove a hard fact.
+A value from BDL or a value that the program computes from BDL data and the user location.
+The program can trace a hard fact to the source data.
 
 **Soft advice**
-A suggestion that comes from the model. The program cannot prove soft advice. The card marks it as a suggestion.
+A suggestion from the model. The program cannot trace soft advice to the source data and marks soft advice as a suggestion.
 
 **Possible species**
 A plant or a mushroom that the model expects at the site. A possible species is a name only.
