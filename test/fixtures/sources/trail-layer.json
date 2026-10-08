@@ -1,0 +1,297 @@
+{
+ "currentVersion": 11.3,
+ "cimVersion": "3.3.0",
+ "id": 61,
+ "name": "Szlaki turystyczne",
+ "type": "Feature Layer",
+ "description": "",
+ "geometryType": "esriGeometryPolyline",
+ "sourceSpatialReference": {
+  "wkid": 2180,
+  "latestWkid": 2180,
+  "xyTolerance": 0.001,
+  "zTolerance": 0.001,
+  "mTolerance": 0.001,
+  "falseX": -5119200,
+  "falseY": -15295100,
+  "xyUnits": 10000,
+  "falseZ": -100000,
+  "zUnits": 10000,
+  "falseM": -100000,
+  "mUnits": 10000
+ },
+ "copyrightText": "",
+ "parentLayer": null,
+ "subLayers": [],
+ "minScale": 0,
+ "maxScale": 0,
+ "referenceScale": 0.0,
+ "drawingInfo": {
+  "renderer": {
+   "type": "simple",
+   "symbol": {
+    "type": "esriSLS",
+    "style": "esriSLSSolid",
+    "color": [
+     0,
+     0,
+     0,
+     255
+    ],
+    "width": 0.5
+   }
+  },
+  "scaleSymbols": true,
+  "transparency": 0,
+  "labelingInfo": null
+ },
+ "defaultVisibility": true,
+ "extent": {
+  "xmin": 160174.33946666645,
+  "ymin": 116609.59295318188,
+  "xmax": 868953.1916817207,
+  "ymax": 788667.7421698023,
+  "spatialReference": {
+   "wkid": 2180,
+   "latestWkid": 2180,
+   "xyTolerance": 0.001,
+   "zTolerance": 0.001,
+   "mTolerance": 0.001,
+   "falseX": -5119200,
+   "falseY": -15295100,
+   "xyUnits": 10000,
+   "falseZ": -100000,
+   "zUnits": 10000,
+   "falseM": -100000,
+   "mUnits": 10000
+  }
+ },
+ "hasAttachments": false,
+ "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+ "displayField": "inv_nr",
+ "typeIdField": null,
+ "subtypeFieldName": null,
+ "subtypeField": null,
+ "defaultSubtypeCode": null,
+ "fields": [
+  {
+   "name": "obj_id",
+   "type": "esriFieldTypeOID",
+   "alias": "objectid",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "shape",
+   "type": "esriFieldTypeGeometry",
+   "alias": "geom",
+   "domain": null
+  },
+  {
+   "name": "st_length(shape)",
+   "type": "esriFieldTypeDouble",
+   "alias": "st_length(geom)",
+   "domain": null
+  },
+  {
+   "name": "objectid",
+   "type": "esriFieldTypeInteger",
+   "alias": "objectid",
+   "domain": null
+  },
+  {
+   "name": "tur_line_id",
+   "type": "esriFieldTypeInteger",
+   "alias": "tur_line_id",
+   "domain": null
+  },
+  {
+   "name": "inspectorate_nr",
+   "type": "esriFieldTypeSmallInteger",
+   "alias": "inspectorate_nr",
+   "domain": null
+  },
+  {
+   "name": "inv_nr",
+   "type": "esriFieldTypeString",
+   "alias": "inv_nr",
+   "length": 12,
+   "domain": null
+  },
+  {
+   "name": "tur_line_cd",
+   "type": "esriFieldTypeString",
+   "alias": "tur_line_cd",
+   "length": 10,
+   "domain": null
+  },
+  {
+   "name": "tur_obj_desc",
+   "type": "esriFieldTypeString",
+   "alias": "tur_obj_desc",
+   "length": 100,
+   "domain": null
+  },
+  {
+   "name": "nzw_ob",
+   "type": "esriFieldTypeString",
+   "alias": "nzw_ob",
+   "length": 100,
+   "domain": null
+  },
+  {
+   "name": "agreement",
+   "type": "esriFieldTypeString",
+   "alias": "agreement",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "loop",
+   "type": "esriFieldTypeString",
+   "alias": "loop",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "tur_line_management_cd",
+   "type": "esriFieldTypeString",
+   "alias": "tur_line_management_cd",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "tab_edu",
+   "type": "esriFieldTypeString",
+   "alias": "tab_edu",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "tur_line_course_cd",
+   "type": "esriFieldTypeString",
+   "alias": "tur_line_course_cd",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "foreign_key",
+   "type": "esriFieldTypeString",
+   "alias": "foreign_key",
+   "length": 50,
+   "domain": null
+  },
+  {
+   "name": "active_fl",
+   "type": "esriFieldTypeString",
+   "alias": "active_fl",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "bdl",
+   "type": "esriFieldTypeString",
+   "alias": "bdl",
+   "length": 1,
+   "domain": null
+  },
+  {
+   "name": "dlugosc",
+   "type": "esriFieldTypeInteger",
+   "alias": "dlugosc",
+   "domain": null
+  }
+ ],
+ "geometryField": {
+  "name": "shape",
+  "type": "esriFieldTypeGeometry",
+  "alias": "geom"
+ },
+ "indexes": [
+  {
+   "name": "mvk_tur_line_rowid_uk",
+   "fields": "obj_id",
+   "isAscending": true,
+   "isUnique": true,
+   "description": ""
+  },
+  {
+   "name": "mvk_tur_line_ix1",
+   "fields": "shape",
+   "isAscending": true,
+   "isUnique": true,
+   "description": ""
+  }
+ ],
+ "subtypes": [],
+ "relationships": [],
+ "canModifyLayer": true,
+ "canScaleSymbols": false,
+ "hasLabels": false,
+ "capabilities": "Map,Query,Data",
+ "maxRecordCount": 2000,
+ "supportsStatistics": true,
+ "supportsExceedsLimitStatistics": true,
+ "supportsAdvancedQueries": true,
+ "supportedQueryFormats": "JSON, geoJSON, PBF",
+ "isDataVersioned": false,
+ "ownershipBasedAccessControlForFeatures": {"allowOthersToQuery": true},
+ "useStandardizedQueries": true,
+ "supportedSpatialRelationships": [
+  "esriSpatialRelIntersects",
+  "esriSpatialRelContains",
+  "esriSpatialRelCrosses",
+  "esriSpatialRelEnvelopeIntersects",
+  "esriSpatialRelIndexIntersects",
+  "esriSpatialRelOverlaps",
+  "esriSpatialRelTouches",
+  "esriSpatialRelWithin",
+  "esriSpatialRelRelation"
+ ],
+ "advancedQueryCapabilities": {
+  "useStandardizedQueries": true,
+  "supportsStatistics": true,
+  "supportsPercentileStatistics": true,
+  "supportsHavingClause": true,
+  "supportsOrderBy": true,
+  "supportsDistinct": true,
+  "supportsCountDistinct": true,
+  "supportsAdvancedQueryRelated": true,
+  "supportsQueryRelatedPagination": true,
+  "supportsPagination": true,
+  "supportsLod": false,
+  "supportsQueryWithLodSR": false,
+  "supportsTrueCurve": true,
+  "supportsQueryWithDatumTransformation": true,
+  "supportsReturningQueryExtent": true,
+  "supportsQueryWithDistance": true,
+  "supportsSqlExpression": true,
+  "supportsTimeRelation": true,
+  "supportsSqlFormat": false,
+  "supportsQueryAnalytic": true,
+  "supportsCurrentUserQueries": true
+ },
+ "supportsDatumTransformation": true,
+ "advancedQueryAnalyticCapabilities": {
+  "supportsLinearRegression": true,
+  "supportsAsync": false,
+  "supportsPercentileAnalytic": false
+ },
+ "dateFieldsTimeReference": null,
+ "preferredTimeReference": null,
+ "datesInUnknownTimezone": false,
+ "hasGeometryProperties": true,
+ "geometryProperties": {
+  "shapeLengthFieldName": "st_length(shape)",
+  "units": "esriMeters",
+  "mapUnits": {"uwkid": 9001}
+ },
+ "hasMetadata": true,
+ "isDataArchived": false,
+ "archivingInfo": {
+  "supportsQueryWithHistoricMoment": false,
+  "startArchivingMoment": -1
+ },
+ "supportsCoordinatesQuantization": true,
+ "supportsDynamicLegends": true
+}
