@@ -9,6 +9,7 @@ The repository contains specifications only. No application code or tests exist.
 The architect read PLAN.md, README.md, GLOSSARY.md, MVP checks, data sources, model guidance, and both existing decisions.
 The architect read review 1, its response, review 2, and all seven manager decision artifacts.
 The goal message of 2026-10-08 adds a model stub, a passing full suite, and the deadline.
+Revision r3 applies the user decision decision-osm-trail-fallback.md and the accepted Stage S verdict.
 Only this goal is open. No shared schema or file conflicts exist with another goal.
 GLOSSARY.md remains one shared file. Serialize any later goal that changes GLOSSARY.md.
 
@@ -35,7 +36,8 @@ Do not infer a trail from a raster color or from an unrelated tourism feature.
 
 Required sources are rdlp, nadlesnictwa, lesnictwa, and the stand collections.
 If a time or size limit prevents a complete read of any required source, return an error without a card.
-Evidence sources are the ban WMS and the trail source. Their failure gives unknown evidence, not an error.
+Evidence sources are the ban WMS and the OpenStreetMap trail source. Their failure gives unknown evidence, not an error.
+BDL stays the source for RDLP regions, districts, ranges, stands, and bans.
 Require model FAKTY and WNIOSKI sections. Validate FAKTY against the fact block.
 Render authoritative facts from source data. Render only accepted WNIOSKI as soft advice.
 Put the model client behind one interface with two implementations: stub and Ollama.
@@ -85,17 +87,24 @@ Apply a named district ban conservatively to candidate ranges in that district.
 For an empty successful sample, use only the label no known ban.
 Display unavailable or malformed samples as unknown.
 
-Verify walking-trail evidence in Stage S, before B1 starts.
-Inspect BDL tourism capabilities and linked public feature services for walking-trail geometry or explicit range intersections.
-Record the endpoint, layer, query, geometry, range identity, retrieval time, and response fixture in source-contract.md.
-Verify range identifiers and range-to-district relationships in the same artifact.
-Record the WMS GetFeatureInfo formats. Prefer a JSON format, which the standard library parses.
-Record whether the stand collections can return attributes without geometry.
-If no source establishes trail-range intersection, the worker annotates the gap and escalates with coord escalate.
-The architect then informs the manager and applies the fallback below. B1 does not wait for a new decision.
-Fallback: the card lists no forest walk areas and states that trail evidence is unavailable.
-Do not substitute horse trails, tourism points, or invented fixtures for verified walking-trail evidence.
-Fixture tests alone cannot resolve the source gate.
+The BDL sources that Stage S checked supplied no verified walking-trail evidence. Layer 61 holds horse trails only.
+The user decision makes OpenStreetMap the fallback source for walking trails. BDL keeps all other facts.
+Do not use BDL horse trails or tourism points as walking-trail evidence.
+BDL layer 75 (educational paths) remains unverified. Under the user decision, this plan does not use it.
+A mapped walking trail is an OpenStreetMap route relation with route=hiking, route=foot, or route=walking.
+Query the public Overpass API once per search for these relations in the search bounding box, with member way geometry.
+Use Net::HTTP and the standard-library JSON parser. Add no gem. Use coord escalate before any dependency.
+Send a User-Agent that names forest_radar. Read the Overpass address from configuration, not from a request.
+Limit one Overpass response to 16 MiB and 25 seconds. Count the Overpass call against the 60-second search budget.
+Retry at most one time after a timeout, a connection error, or a 5xx status. Never retry 429 or another 4xx status.
+A trail crosses a range when a member way intersects the range polygon, excluding holes, in the local plane.
+Record the relation identifier, name, ref, and route value as evidence for each listed range.
+If Overpass fails or answers malformed data, the trail evidence is unknown. The card lists zero areas and states this reason.
+If Overpass answers successfully with no crossing trail, the card lists zero areas and states that no mapped trail crosses a nearby range.
+The card names OpenStreetMap as the trail source and shows the attribution: © OpenStreetMap contributors, with a link to https://www.openstreetmap.org/copyright.
+Verify the Overpass contract in Stage S2 before B2 starts. Record it in osm-contract.md in the goal artifact folder.
+Tests use recorded Overpass responses only. No test mode, including --live, calls Overpass.
+Stage S2 research is the only live Overpass verification. A live Overpass test needs a new user decision.
 
 ## Session cache
 
@@ -108,6 +117,9 @@ The compact result holds RDLP, district, and range records with geometry.
 It holds stand attributes, range links, and the in-radius flag, without stand geometry.
 Key the result by session, location, radius, and all query parameters.
 Key WMS results by session, layer, and sample point.
+Key Overpass trail results by the endpoint and the query text, which includes the bounding box. Do not key them by session.
+Cache the parsed relation geometry and tags, not the range intersection results.
+Use a 30-minute absolute TTL for successful Overpass results. Never cache a failed or malformed Overpass answer.
 Use a 30-minute absolute TTL for search results and a five-minute TTL for successful WMS results.
 Use global limits of 256 entries and 128 MiB. Evict least-recently-used entries.
 A maximal search of 100000 stands must fit in one entry. Test that this search is reused in the session.
@@ -124,6 +136,8 @@ All shared artifacts belong in this goal's coordination artifact folder.
 No worker writes an artifact inside a worktree.
 No implementation tasks exist during plan review.
 Order: A and S run in parallel. B1 starts after S is accepted. Then B2, B3, C, and D run in sequence.
+Revision r3 adds A2 and S2. A2 and S2 start after this revision is approved. They run in parallel with B1.
+B2 starts after B1, A2, and S2 land.
 If time runs short before the deadline, cut the ban check first, as docs/roadmap.md says.
 Without the ban check, the card shows the ban status as not checked. The architect informs the manager first.
 
@@ -165,6 +179,40 @@ Report format: Record the verdict for trail evidence, the endpoints, fixture pat
 Keep the three previously agreed promotion paths. Store the four new product decisions with the plan.
 Do not propose another ADR unless the decision meets all three ADR criteria.
 
+### A2: Commit the revised plan and the OSM decision
+
+Owner: backend-developer.
+Scope: docs/plans/local-mvp.md, docs/decisions/0006-osm-trail-fallback.md.
+Goal: Commit plan revision r3 and the user decision on the OpenStreetMap trail fallback.
+Inputs: Shared plan.md, decision-osm-trail-fallback.md, and reviewer approval of r3.
+Out of scope: Application code, GLOSSARY.md, fixtures, and other documents.
+Acceptance: Run `git diff --check goal/c1ab3a20...HEAD`.
+Acceptance: Run `cmp` of each committed file against its shared artifact.
+Report format: Record changed paths, commit, Graph state, and TESTS commands with results.
+
+### S2: Source gate for OpenStreetMap trails
+
+Owner: backend-developer.
+Scope: test/fixtures/osm/, test/fixtures/sources/PROVENANCE.md.
+Goal: Verify the Overpass contract that B2 needs and record live fixtures.
+Inputs: This plan, decision-osm-trail-fallback.md, source-contract.md, and range-sample.json.
+Out of scope: Application code, dependencies, and the existing BDL fixture files.
+Acceptance: Write osm-contract.md in the goal artifact folder.
+Acceptance: Commit recorded live Overpass responses under test/fixtures/osm/ with a PROVENANCE.md manifest.
+Acceptance: Run `git diff --check goal/c1ab3a20...HEAD`. The reviewer accepts osm-contract.md before B2 starts.
+Report format: Record the endpoint, query, response format, fixture paths, crossing verdict, commit, Graph state, and TESTS results.
+
+Record the endpoint, query text, bounding box, response format, retrieval time, and usage policy notes.
+Record one response for the Stage S sample range box. State whether a hiking relation crosses range 5157.
+Record one search box with as many crossing ranges as live data give, up to three. Record the BDL range responses for that box.
+Record one response with no matching relation. Record a live error response if one occurs.
+If no live error occurs, write a labeled synthetic error fixture. Do not provoke rate limits or failures.
+Keep each fixture below 1 MiB. Record any formatting change in PROVENANCE.md. Never simplify coordinates silently.
+Write test/fixtures/sources/PROVENANCE.md with the exact request URL and parameters for each Stage S fixture.
+Correct the Stage S review warnings in source-contract.md. Separate WMS layer names from REST identifiers.
+Record BDL layer 75 as unverified and unused.
+If no crossing relation exists near the sample range, find one nearby forest range with a crossing relation. Record it.
+
 ### B1: Geographic services, complete OGC reads, and cache
 
 Owner: backend-developer.
@@ -181,24 +229,28 @@ Implement explicit --unit, --system, --live, and --all runner modes.
 If a requested suite is absent, fail that mode. B1 requires only --unit.
 Document transport and geometry interfaces in shared backend-contract.md before review.
 
-### B2: Ban and walking-trail evidence
+### B2: Ban and OpenStreetMap walking-trail evidence
 
 Owner: backend-developer.
-Scope: lib/wms/, lib/walk_areas/, test/unit/wms/, test/unit/walk_areas/, test/fixtures/wms/, test/fixtures/trails/, docs/data-sources.md.
+Scope: lib/wms/, lib/osm/, lib/walk_areas/, test/unit/wms/, test/unit/osm/, test/unit/walk_areas/, test/fixtures/wms/, docs/data-sources.md.
 Goal: Implement M4 and select forest walk areas from verified trail and ban evidence.
-Inputs: Landed B1, backend-contract.md, source-contract.md, decision-walk-area.md, and this plan.
+Inputs: Landed B1, A2, and S2, backend-contract.md, source-contract.md, osm-contract.md, decision-osm-trail-fallback.md, and this plan.
 Out of scope: Changes to B1 interfaces, model behavior, routes, views, and dependency additions.
 Acceptance: Run `bundle exec ruby test/run.rb --unit` and `git diff --check goal/c1ab3a20...HEAD`.
 Report format: Record fixture provenance, commit, Graph state, TESTS results, and source limitations.
 
-Implement trail qualification only from the source contract that S verified. Otherwise apply the fallback.
+Implement trail qualification from the Overpass contract that S2 verified. Use the fixtures in test/fixtures/osm/.
+Use the B1 transport, geometry, and cache interfaces. Do not change them.
 Parse WMS output with the standard library. Use JSON if the source offers it.
 Otherwise write a strict parser for the recorded format. Do not add rexml or another gem.
 Read ban tables as data. Never render upstream HTML.
 Test named bans, empty tables, failures, malformed HTML, and district-centre limitations.
 Test trail-range intersection, disjoint trails, unknown evidence, stable ordering, and zero through three eligible areas.
 Preserve excluded-area reasons for the card's limitations section.
-Update source documentation from observed contracts. Do not claim sampling proves access.
+Test the Overpass cache, the no-retry rule for 429, the 16 MiB limit, and the budget.
+Return the trail source name and the attribution with the walk-area result.
+Update source documentation from observed contracts. Add OpenStreetMap, its licence, and its attribution.
+Do not claim sampling proves access.
 
 ### B3: Fact block, model validation, routes, and locale data
 
@@ -259,6 +311,7 @@ Show progress, errors, missing attributes, unavailable evidence, and zero result
 Render at most three forest walk areas with computed distances.
 Separate authoritative facts and accepted soft advice visibly.
 Show source years, local access uncertainty, the safety warning, and the fixed mushroom warning.
+Name OpenStreetMap as the trail source. Show the OpenStreetMap attribution and copyright link, including in print output.
 Render external text as text, never markup.
 Open the sanitary station link in a new tab with noopener.
 Support a phone viewport at 100 percent zoom and one printed A4 page.
@@ -287,15 +340,17 @@ Cover source failures, model failures, card sections, local access warnings, lin
 Check phone overflow at 100 percent zoom.
 Print with paperWidth 8.27 and paperHeight 11.69 inches. Assert Pages: 1 and an A4 page size of about 595 x 842 pt.
 Include one fixture with three qualifying areas and one fixture with fewer than three.
-If S verified trail evidence, include one live location with three qualifying areas.
+Build the area fixtures from the recorded S2 Overpass responses and the recorded BDL responses.
+If the records give fewer than three qualifying areas, use a labeled synthetic geometry fixture for the three-area case.
+Include one fixture with unknown trail evidence. Check the OpenStreetMap attribution on screen and in print.
 Use deterministic HTTP fixtures for browser checks. Label fixture evidence explicitly.
-Add live contracts for BDL, trail evidence, ban parsing, and the supplied Ollama endpoint.
+Add live contracts for BDL, ban parsing, and the supplied Ollama endpoint. Add no live Overpass contract.
 Record model identity, host hardware, warm state, timing including retries, Polish output, and rejection checks.
 A fixture cannot satisfy live M5. A missing endpoint must fail the --live suite.
 Use the stub client in --unit and --system. The --all suite runs --unit and --system only.
 Document cache limits, startup, model configuration, and source limitations.
 Remove dog guidance promises from README.md.
-Correct privacy claims in README.md and PLAN.md: BDL receives location queries; Maps receives location after link activation.
+Correct privacy claims in README.md and PLAN.md: BDL and the Overpass API receive location queries; Maps receives location after link activation.
 The configured model host also receives the fact block. Explain that host boundary.
 
 ## Review, merge, and closure
