@@ -12,8 +12,8 @@ Status date: 2026-10-09. Task: D (acceptance harness). Fixtures are deterministi
 | M1 radius 1 to 20 km | `app_test.rb` | `test_m1_radius_limits_are_enforced_before_any_request` | — |
 | M2 region and district | `bdl/*_test.rb` | card shows district evidence | `BdlLiveTest#test_m2_*` (fails: see L1) |
 | M3 stands, attributes, count, cache | `bdl/*`, `cache/*`, `assembler/facts_test.rb` | `test_m7_card_shows_three_nearest_areas...` (years) | `BdlLiveTest#test_m3_*` |
-| M4 ban layer, ban fact, no known ban, no "open" promise | `wms/*`, `locales_test.rb` | `test_m4_*`, `test_unknown_ban_and_trail_evidence_*` | `BdlLiveTest#test_m4_*` (fails: see L2) |
-| M5 Polish, sections, no unsafe words, under 30 s | `model/*_test.rb`, `app_test.rb` | stub model only | `OllamaLiveTest` — **pending, no endpoint** |
+| M4 ban layer, ban fact, no known ban, no "open" promise | `wms/*`, `locales_test.rb` | `test_m4_*`, `test_unknown_ban_and_trail_evidence_*` | `BdlLiveTest#test_m4_*` (records `unknown`: see L2) |
+| M5 Polish, sections, no unsafe words, under 30 s | `model/*_test.rb`, `app_test.rb` | stub model only | `OllamaLiveTest` — **pending, no endpoint; language needs human review (D-R3)** |
 | M6 warning, sanitary link | `locales_test.rb`, `sanepid_test.rb` | `test_m6_card_holds_fixed_warning_and_sanepid_link` | — |
 | M7 three nearest forests with distance | `walk_areas/*` | `test_m7_card_shows_three_nearest_areas...`, `test_m7_fewer_than_three_areas...` | — |
 | M7 one A4 page | — | `test_m7_card_prints_on_one_a4_page_with_attribution` (passes), `test_m7_maximum_content_card_prints_on_one_a4_page` (fails: C-R2) | — |
@@ -36,10 +36,11 @@ B3-R5, B3-R7, B3-R8, B3-R12, and C-R1 stay open. `test_request_failures_show_pol
 
 - **C-R2 (open).** `test_m7_maximum_content_card_prints_on_one_a4_page` fails. Chrome prints the maximum-content card on 3 pages. The print stylesheet (`public/style.css` line 25 and later) has no content budget, and `public/app.js` renders every summary entry and every trail name. The test is not skipped.
 - **L1 (live, new).** `forest_range_name` and `inspectorate_name` are the live property names for ranges and districts. `lib/assembler/facts.rb` reads `properties.name`. Live cards show "brak danych" for every area and district name. Evidence: `BdlLiveTest#test_m2_card_facts_carry_the_live_range_and_district_names`.
-- **L2 (live, new).** The live ban WMS exposes layers `0`, `1`, `2`. `lib/wms/ban_client.rb` asks for layer `3`. The server answers `LayerNotDefined`, and every live ban status becomes `unknown`. The recorded `bans-capabilities.xml` lists layer 3 and is stale. Evidence: `BdlLiveTest#test_m4_ban_layer_answers_with_a_known_status_for_a_live_district`.
+- **L2 (live, updated).** The live ban source returns HTTP 400 today (task fb7a8d81). The client maps the failure to `unknown`. `BdlLiveTest#test_m4_ban_layer_answer_is_recorded_and_never_invented` accepts `unknown` and prints an `EVIDENCE` line with verdict `SOURCE-UNAVAILABLE (known ban status NOT proven)`. A known ban status is not proven live. Earlier finding: layer `3` is absent live, and the recorded `bans-capabilities.xml` is stale.
 - **Observation.** The OpenStreetMap attribution text on the card is the English `© OpenStreetMap contributors` from the backend. The locale key `ui.osm_attribution` is only a fallback.
 
 ## Pending live checks
 
+- Live M5 language review: the Polish regex is a smoke check. A human must review the recorded output before M5 counts as accepted. The first request state is `unknown` (residency is not checked).
 - Live M5: no Ollama endpoint is supplied. `OllamaLiveTest` fails without `OLLAMA_URL`. Record model identity, host hardware, warm state, timing with retries, Polish output, and rejection checks from its `EVIDENCE` line.
 - Live Overpass: no contract on purpose.

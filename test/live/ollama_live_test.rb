@@ -15,6 +15,8 @@ require 'model/client'
 class OllamaLiveTest < Minitest::Test
   LINES = { 'F1' => 'areas[0].name=Las testowy', 'F2' => 'areas[0].distance_km=2.5',
             'F3' => 'areas[0].species={"SO"=>3}', 'F4' => 'areas[0].years={2024=>3}' }.freeze
+  # SMOKE CHECK ONLY. Any one accented letter or listed word passes, so English advice with a name such as
+  # "Łódź" also passes. Live M5 needs a recorded human language review before it counts as accepted.
   POLISH = /[ąćęłńóśźż]|\b(?:się|nie|oraz|przed|las|lesie)\b/i
 
   class CountingHTTP
@@ -64,16 +66,34 @@ class OllamaLiveTest < Minitest::Test
     [advice, (clock - started).round(2), http.posts]
   end
 
-  def test_m5_model_answers_in_polish_within_the_budget
+  def unsafe_answer
+    "FAKTY\n#{LINES.map { |id, v| "#{id}: #{v}" }.join("\n")}\nWNIOSKI\nTen grzyb jest jadalny. Las jest otwarty."
+  end
+
+  def rejected?
+    Model::Validator.new.validate(unsafe_answer, LINES)
+    false
+  rescue Model::Invalid
+    true
+  end
+
+  # The first request state is "unknown": the test does not check whether Ollama already held the model in memory.
+  def test_m5_model_answers_within_the_budget_and_prints_evidence_after_the_assertions
     model = identity
-    cold, cold_seconds, cold_posts = timed_call
-    advice, warm_seconds, warm_posts = timed_call
-    puts "EVIDENCE #{JSON.generate(model: model, hardware: @hardware, cold_seconds: cold_seconds, cold_posts: cold_posts,
-                                    warm_seconds: warm_seconds, warm_posts: warm_posts, output: advice)}"
-    assert_match POLISH, advice
-    assert_match POLISH, cold
-    assert_operator warm_seconds, :<, 30
-    assert_operator cold_seconds, :<, 30
+    first, first_seconds, first_posts = timed_call
+    second, second_seconds, second_posts = timed_call
+    rejection = rejected?
+    assert_match POLISH, first
+    assert_match POLISH, second
+    assert_operator first_seconds, :<, 30
+    assert_operator second_seconds, :<, 30
+    assert rejection, 'validator accepted an unsafe answer'
+    puts "EVIDENCE #{JSON.generate(model: model, hardware: @hardware,
+                                    first: { state: 'unknown', seconds: first_seconds, posts: first_posts, output: first },
+                                    second: { state: 'follows a first request', seconds: second_seconds,
+                                              posts: second_posts, output: second },
+                                    rejection: { unsafe_answer_rejected: rejection },
+                                    language_review: 'PENDING human review; POLISH regex is a smoke check')}"
   end
 
   def test_m5_validator_rejects_unsafe_live_looking_answers

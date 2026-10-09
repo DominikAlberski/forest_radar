@@ -83,7 +83,8 @@ The server keeps source answers in memory, per browser session cookie. The limit
 
 - The card shows at most three forest ranges. Each range needs an OpenStreetMap trail that crosses it and a ban layer answer.
 - The ban layer is sampled at the centre of the forest district. The answer says nothing about the whole range. The card never says a forest is open.
-- A source failure gives an error message and no card. A model failure gives an error message and no card.
+- A BDL retrieval failure, a model failure, or a missing region gives an error message and no card.
+- Unavailable OpenStreetMap trail evidence or an unavailable ban layer answer is not fatal. Such a range is not selected. If no range remains, the card shows the Polish zero-areas message, the OpenStreetMap attribution, the safety warnings, and the model advice. It does not mean that the forest has no trail or no ban.
 - Trail data comes from OpenStreetMap through the Overpass API. The card shows the OpenStreetMap attribution and the copyright link.
 - The model deadline is 29 seconds for one card.
 
@@ -100,8 +101,22 @@ The location does not stay on one machine.
 
 ```sh
 bundle exec ruby test/run.rb --unit      # unit tests, no network, stub model
-coord with-lock system-test -- bundle exec ruby test/run.rb --system   # headless Chrome checks
-bundle exec ruby test/run.rb --live      # BDL, ban layer, and Ollama contracts
+bundle exec ruby test/run.rb --system    # headless Chrome checks, no coord needed
+```
+
+Live checks need the network and an Ollama endpoint. Run them in one command:
+
+```sh
+OLLAMA_URL=http://host:11434 OLLAMA_HOST_HARDWARE='<description>' OLLAMA_MODEL=<tag> \
+  bundle exec ruby test/run.rb --live
+```
+
+Contributors who use the `coord` task board run the shared-resource suites under locks. Run `source .maf/env.sh` once, then:
+
+```sh
+coord with-lock system-test -- bundle exec ruby test/run.rb --system
+OLLAMA_URL=http://host:11434 OLLAMA_HOST_HARDWARE='<description>' OLLAMA_MODEL=<tag> \
+  coord with-lock ollama -- bundle exec ruby test/run.rb --live
 ```
 
 `--all` runs `--unit` and `--system`. It never runs `--live`.
@@ -117,7 +132,7 @@ The harness starts its own Chrome with a temporary profile and a Ruby driver ove
 ### Live prerequisites (`--live`)
 
 - Network access to `ogcapi.bdl.lasy.gov.pl` and `mapserver.bdl.lasy.gov.pl`.
-- `OLLAMA_URL` and `OLLAMA_HOST_HARDWARE`. `OLLAMA_MODEL` is optional. A missing endpoint fails the suite. Run it under `coord with-lock ollama`.
+- `OLLAMA_URL` and `OLLAMA_HOST_HARDWARE`. `OLLAMA_MODEL` is optional. A missing endpoint fails the suite. The live ban source returns HTTP 400 today, so the live ban check records `unknown` as source-failure evidence. The Polish check on model output is a smoke check. Live M5 needs a recorded human language review.
 
 The evidence record is `docs/plans/m1-m7-evidence.md`.
 
