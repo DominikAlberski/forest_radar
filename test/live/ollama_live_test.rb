@@ -29,13 +29,19 @@ class OllamaLiveTest < Minitest::Test
     end
 
     def start(*, **, &block)
-      Net::HTTP.start(*, **) do |connection|
-        counter = self
-        connection.define_singleton_method(:post) do |*post_args|
-          counter.instance_variable_set(:@posts, counter.posts + 1)
-          super(*post_args)
-        end
-        block.call(connection)
+      Net::HTTP.start(*, **) { |connection| count_posts(connection, block) }
+    end
+
+    def count_posts(connection, block)
+      counter = self
+      wrap_post(connection, counter)
+      block.call(connection)
+    end
+
+    def wrap_post(connection, counter)
+      connection.define_singleton_method(:post) do |*post_args|
+        counter.instance_variable_set(:@posts, counter.posts + 1)
+        super(*post_args)
       end
     end
   end
@@ -43,11 +49,22 @@ class OllamaLiveTest < Minitest::Test
   def setup
     @url = ENV['OLLAMA_URL'].to_s
     @hardware = ENV['OLLAMA_HOST_HARDWARE'].to_s
+    require_live_config
+    @model = configured_model
+  end
+
+  def require_live_config
     flunk 'OLLAMA_URL is not set. Live M5 cannot pass without the supplied endpoint.' if @url.empty?
     flunk 'OLLAMA_HOST_HARDWARE is not set. Record the host hardware.' if @hardware.empty?
-    @model = ENV.fetch('OLLAMA_MODEL') do
-      YAML.safe_load_file(File.expand_path('../../config/model.yml', __dir__)).fetch('model')
-    end
+  end
+
+  def configured_model
+    ENV.fetch('OLLAMA_MODEL') { model_from_config }
+  end
+
+  def model_from_config
+    path = File.expand_path('../../config/model.yml', __dir__)
+    YAML.safe_load_file(path).fetch('model')
   end
 
   def clock
@@ -57,8 +74,15 @@ class OllamaLiveTest < Minitest::Test
   def identity
     uri = URI("#{@url}/api/show")
     body = Net::HTTP.post(uri, JSON.generate(model: @model), 'Content-Type' => 'application/json')
+    model_identity(identity_details(body))
+  end
+
+  def identity_details(body)
     flunk "model #{@model} is unknown to #{@url}: HTTP #{body.code}" unless body.code == '200'
-    details = JSON.parse(body.body)['details'] || {}
+    JSON.parse(body.body)['details'] || {}
+  end
+
+  def model_identity(details)
     { model: @model, family: details['family'], parameters: details['parameter_size'],
       quantization: details['quantization_level'] }
   end
@@ -85,28 +109,43 @@ class OllamaLiveTest < Minitest::Test
   # The first request state is "unknown": the test does not check whether Ollama already held the model in memory.
   def test_m5_model_answers_within_the_budget_and_prints_evidence_after_the_assertions
     model = identity
-    first, first_seconds, first_posts = timed_call
-    second, second_seconds, second_posts = timed_call
+    first, second = live_calls
     rejection = rejected?
-    assert_match POLISH, first
-    assert_match POLISH, second
-    assert_operator first_seconds, :<, 30
-    assert_operator second_seconds, :<, 30
+    assert_live_answers(first, second, rejection)
+    print_evidence(model, first, second, rejection)
+  end
+
+  def live_calls
+    [timed_call, timed_call]
+  end
+
+  def assert_live_answers(first, second, rejection)
+    [first, second].each { |advice, seconds, _posts| assert_answer(advice, seconds) }
     assert rejection, 'validator accepted an unsafe answer'
-    puts "EVIDENCE #{JSON.generate(model: model, hardware: @hardware,
-                                   first: { state: 'unknown', seconds: first_seconds, posts: first_posts,
-                                            output: first },
-                                   second: { state: 'follows a first request', seconds: second_seconds,
-                                             posts: second_posts, output: second },
-                                   rejection: { unsafe_answer_rejected: rejection },
-                                   language_review: 'PENDING human review; POLISH regex is a smoke check')}"
+  end
+
+  def assert_answer(advice, seconds)
+    assert_match POLISH, advice
+    assert_operator seconds, :<, 30
+  end
+
+  def print_evidence(model, first, second, rejection)
+    puts "EVIDENCE #{JSON.generate(evidence(model, first, second, rejection))}"
+  end
+
+  def evidence(model, first, second, rejection)
+    { model: model, hardware: @hardware, first: request_evidence(first, 'unknown'),
+      second: request_evidence(second, 'follows a first request'),
+      rejection: { unsafe_answer_rejected: rejection },
+      language_review: 'PENDING human review; POLISH regex is a smoke check' }
+  end
+
+  def request_evidence(call, state)
+    advice, seconds, posts = call
+    { state: state, seconds: seconds, posts: posts, output: advice }
   end
 
   def test_m5_validator_rejects_unsafe_live_looking_answers
-    facts = LINES.map do |id, v|
-      "#{id}: #{v}"
-    end.join("\n")
-    unsafe = "FAKTY\n#{facts}\nWNIOSKI\nTen grzyb jest jadalny. Las jest otwarty."
-    assert_raises(Model::Invalid) { Model::Validator.new.validate(unsafe, LINES) }
+    assert_raises(Model::Invalid) { Model::Validator.new.validate(unsafe_answer, LINES) }
   end
 end

@@ -27,27 +27,57 @@ class BdlLiveTest < Minitest::Test
   end
 
   def test_m2_card_facts_carry_the_live_range_and_district_names
+    assert_facts_for_live_area
+  end
+
+  def assert_facts_for_live_area
     range = result.fetch(:ranges).first
     district = result.fetch(:districts).first
-    walk = { areas: [range.merge(trails: [])], trail_source: 'OpenStreetMap',
-             attribution: 'x', attribution_url: 'x' }
-    facts = Assembler::Facts.new.build(result, walk)
-    expected_range = range.dig('properties', 'forest_range_name')
-    expected_district = district.dig('properties', 'inspectorate_name')
-    refute_nil expected_range
-    refute_nil expected_district
-    refute_empty expected_range.to_s.strip
-    refute_empty expected_district.to_s.strip
-    assert_equal expected_range, facts[:areas].first[:name]
-    assert_equal expected_district, facts[:districts].first[:name]
+    facts = facts_for_range(range)
+    assert_facts_have_live_names(range, district, facts)
+  end
+
+  def facts_for_range(range)
+    walk = { areas: [range.merge(trails: [])], trail_source: 'OpenStreetMap', attribution: 'x', attribution_url: 'x' }
+    Assembler::Facts.new.build(result, walk)
+  end
+
+  def assert_facts_have_live_names(range, district, facts)
+    range_name = range.dig('properties', 'forest_range_name')
+    district_name = district.dig('properties', 'inspectorate_name')
+    assert_live_names(range_name, district_name)
+    assert_equal range_name, facts[:areas].first[:name]
+    assert_equal district_name, facts[:districts].first[:name]
+  end
+
+  def assert_live_name(name)
+    refute_nil name
+    refute_empty name.to_s.strip
+  end
+
+  def assert_live_names(range_name, district_name)
+    assert_live_name(range_name)
+    assert_live_name(district_name)
   end
 
   def test_m3_stands_carry_attribute_keys_and_counts_match_the_returned_stands
+    assert_stand_contract
+  end
+
+  def assert_stand_contract
     stands = result.fetch(:stands)
     assert_operator stands.size, :>=, 1
-    %w[species_cd site_type spec_age sub_area].each { |key| assert_includes stands.first.keys, key }
+    assert_stand_keys(stands)
+    assert_stand_counts(stands)
+  end
+
+  def assert_stand_counts(stands)
     assert_equal stands.size, result.fetch(:box_stand_count)
     assert_equal stands.count { |item| item['in_radius'] }, result.fetch(:radius_stand_count)
     assert_equal stands.count { |item| item['missing_identifier'] }, result.fetch(:missing_identifier_count)
+  end
+
+  def assert_stand_keys(stands)
+    %w[species_cd site_type spec_age sub_area].each { |key| assert_includes stands.first.keys, key }
   end
 end

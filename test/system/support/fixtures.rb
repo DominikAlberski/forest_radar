@@ -23,8 +23,8 @@ module SystemFixtures
       'spec_age' => 70, 'a_year' => 2024, 'sub_area' => 1.5 }.merge(attrs)
   end
 
-  def self.range(id, x, distance, name)
-    { 'id' => id, 'geometry' => square(x), 'district_id' => 1, 'distance_km' => distance,
+  def self.range(identifier, x, distance, name)
+    { 'id' => identifier, 'geometry' => square(x), 'district_id' => 1, 'distance_km' => distance,
       'properties' => { 'name' => name } }
   end
 
@@ -73,7 +73,7 @@ module SystemFixtures
       @areas = areas
     end
 
-    def select(search:, **)
+    def select(**)
       { areas: @areas.map { |area| area.merge('distance_km' => area['distance_km']) }, excluded: [],
         trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
         attribution_url: OSM::Client::COPYRIGHT_URL }
