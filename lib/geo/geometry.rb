@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Geo
+  # Computes containment, intersections, and distances for polygon geometry.
   module Geometry
     EARTH_KM = 6371.0088
 
@@ -21,85 +22,109 @@ module Geo
 
     def polygons(geometry)
       return [] unless geometry
+
       raise ArgumentError, 'invalid geometry' unless geometry.is_a?(Hash)
+
+      geometry_polygons(geometry)
+    end
+
+    def geometry_polygons(geometry)
+      coordinates = validated_coordinates(geometry)
+      geometry_type = geometry['type']
+      return [coordinates] if geometry_type == 'Polygon'
+      return coordinates if geometry_type == 'MultiPolygon'
+
+      raise ArgumentError, 'unsupported geometry'
+    end
+
+    def validated_coordinates(geometry)
       raise ArgumentError, 'invalid coordinates' unless geometry['coordinates'].is_a?(Array)
 
-      case geometry['type']
-      when 'Polygon' then [geometry.fetch('coordinates')]
-      when 'MultiPolygon' then geometry.fetch('coordinates')
-      else raise ArgumentError, 'unsupported geometry'
-      end
+      geometry.fetch('coordinates')
     end
 
     def inside_ring?(point, ring)
-      return true if ring.each_cons(2).any? { |a, b| on_segment?(point, a, b) }
+      segments = ring.each_cons(2).to_a
+      return true if segments.any? { |start_point, end_point| on_segment?(point, start_point, end_point) }
 
-      ring.each_cons(2).count do |a, b|
-        (a[1] > point[1]) != (b[1] > point[1]) &&
-          point[0] < ((b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1])) + a[0]
-      end.odd?
+      segments.count { |start_point, end_point| ray_crosses?(point, start_point, end_point) }.odd?
     end
 
-    def on_segment?(point, a, b)
-      cross = ((point[0] - a[0]) * (b[1] - a[1])) - ((point[1] - a[1]) * (b[0] - a[0]))
-      cross.abs < 1e-10 && point[0].between?(*[a[0], b[0]].minmax) &&
-        point[1].between?(*[a[1], b[1]].minmax)
+    def ray_crosses?(point, ray_start, ray_end)
+      point_y = point[1]
+      above_start = ray_start[1] > point_y
+      above_end = ray_end[1] > point_y
+      above_start != above_end && point[0] < ray_intersection_x(point, ray_start, ray_end)
+    end
+
+    def ray_intersection_x(point, line_start, line_end)
+      start_x, start_y = line_start
+      rise = point[1] - start_y
+      run = line_end[0] - start_x
+      start_x + (run * rise / (line_end[1] - start_y))
+    end
+
+    def on_segment?(point, start_point, end_point)
+      side(start_point, end_point, point).abs < 1e-10 && within_bounds?(point, start_point, end_point)
+    end
+
+    def within_bounds?(point, boundary_start, boundary_end)
+      point[0].between?(*[boundary_start[0], boundary_end[0]].minmax) &&
+        point[1].between?(*[boundary_start[1], boundary_end[1]].minmax)
     end
 
     def contains?(geometry, point)
-      polygons(geometry).any? do |rings|
-        boundary = rings.any? { |ring| ring.each_cons(2).any? { |a, b| on_segment?(point, a, b) } }
-        boundary || (inside_ring?(point, rings.first) && rings.drop(1).none? { |ring| inside_ring?(point, ring) })
-      end
+      polygons(geometry).any? { |rings| contains_rings?(rings, point) }
     end
 
-    def segment_distance(point, a, b)
-      dx = b[0] - a[0]
-      dy = b[1] - a[1]
-      t = dx.zero? && dy.zero? ? 0 : (((point[0] - a[0]) * dx) + ((point[1] - a[1]) * dy)) / ((dx * dx) + (dy * dy))
-      t = [[t, 0].max, 1].min
-      Math.hypot(point[0] - a[0] - (t * dx), point[1] - a[1] - (t * dy))
+    def contains_rings?(rings, point)
+      return true if rings.any? { |ring| ring_boundary?(ring, point) }
+
+      inside_ring?(point, rings.first) && rings.drop(1).none? { |ring| inside_ring?(point, ring) }
+    end
+
+    def ring_boundary?(ring, point)
+      ring.each_cons(2).any? { |start_point, end_point| on_segment?(point, start_point, end_point) }
     end
 
     def distance(geometry, lat, lon)
-      point = [lon, lat]
-      return 0.0 if contains?(geometry, point)
+      return 0.0 if contains?(geometry, [lon, lat])
 
-      polygons(geometry).flat_map do |rings|
-        rings.flat_map do |ring|
-          ring.each_cons(2).map { |a, b| segment_distance([0, 0], project(a, [lat, lon]), project(b, [lat, lon])) }
-        end
-      end.min || Float::INFINITY
+      polygons(geometry).flat_map { |rings| ring_distances(rings, [lat, lon]) }.min || Float::INFINITY
     end
 
-    def intersects_circle?(geometry, lat, lon, radius_km)
-      distance(geometry, lat, lon) <= radius_km
+    def ring_distances(rings, origin)
+      rings.flat_map { |ring| edge_distances(ring, origin) }
+    end
+
+    def edge_distances(ring, origin)
+      ring.each_cons(2).map do |start_point, end_point|
+        segment_distance([0, 0], project(start_point, origin), project(end_point, origin))
+      end
+    end
+
+    def intersects_circle?(geometry, latitude, longitude, radius_km)
+      distance(geometry, latitude, longitude) <= radius_km
     end
 
     def intersects?(left, right)
-      polygons(left).any? do |a|
-        polygons(right).any? do |b|
-          a.first.any? { |point| contains?(right, point) } ||
-            b.first.any? { |point| contains?(left, point) } ||
-            a.any? { |ring| b.any? { |other| edges_cross?(ring, other) } }
-        end
-      end
+      polygons(left).any? { |rings| intersects_rings?(rings, right) }
     end
 
-    def edges_cross?(a, b)
-      a.each_cons(2).any? { |x, y| b.each_cons(2).any? { |u, v| crossing?(x, y, u, v) } }
+    def intersects_rings?(rings, other_geometry)
+      polygons(other_geometry).any? { |other_rings| rings_intersect?(rings, other_rings, other_geometry) }
     end
 
-    def crossing?(a, b, c, d)
-      if side(a, b, c).zero? && side(a, b, d).zero?
-        return on_segment?(c, a, b) || on_segment?(d, a, b) ||
-               on_segment?(a, c, d) || on_segment?(b, c, d)
-      end
-      side(a, b, c) * side(a, b, d) <= 0 && side(c, d, a) * side(c, d, b) <= 0
+    def rings_intersect?(rings, other_rings, other_geometry)
+      rings.first.any? { |point| contains?(other_geometry, point) } ||
+        other_rings.first.any? { |point| contains_rings?(rings, point) } ||
+        rings.any? { |ring| crosses_any_ring?(ring, other_rings) }
     end
 
-    def side(a, b, p)
-      ((b[0] - a[0]) * (p[1] - a[1])) - ((b[1] - a[1]) * (p[0] - a[0]))
+    def crosses_any_ring?(ring, other_rings)
+      other_rings.any? { |other| edges_cross?(ring, other) }
     end
   end
 end
+
+require_relative 'geometry/segments'

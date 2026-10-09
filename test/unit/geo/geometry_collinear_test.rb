@@ -7,8 +7,8 @@ require 'geo/geometry'
 class GeometryCollinearTest < Minitest::Test
   G = Geo::Geometry
 
-  def square(x0, y0, x1, y1)
-    [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+  def square(left, bottom, right, top)
+    [[left, bottom], [right, bottom], [right, top], [left, top], [left, bottom]]
   end
 
   def polygon(*rings)

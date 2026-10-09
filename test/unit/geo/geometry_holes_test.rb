@@ -7,8 +7,8 @@ class GeometryHolesTest < Minitest::Test
   G = Geo::Geometry
   KM_PER_DEGREE = Math::PI * 6371.0088 / 180 # 111.1949 km
 
-  def square(x0, y0, x1, y1)
-    [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+  def square(left, bottom, right, top)
+    [[left, bottom], [right, bottom], [right, top], [left, top], [left, bottom]]
   end
 
   def polygon(*rings)
@@ -42,12 +42,15 @@ class GeometryHolesTest < Minitest::Test
   end
 
   def test_multipolygon_matches_any_part_and_respects_holes
-    shape = { 'type' => 'MultiPolygon',
-              'coordinates' => [[square(0, 0, 1, 1)], [square(10, 10, 14, 14), square(11, 11, 12, 12)]] }
+    shape = { 'type' => 'MultiPolygon', 'coordinates' => multipolygon_parts }
     assert G.contains?(shape, [0.5, 0.5])
     assert G.contains?(shape, [13, 13])
     refute G.contains?(shape, [11.5, 11.5])
     refute G.contains?(shape, [5, 5])
+  end
+
+  def multipolygon_parts
+    [[square(0, 0, 1, 1)], [square(10, 10, 14, 14), square(11, 11, 12, 12)]]
   end
 
   def test_distance_inside_is_zero
