@@ -44,13 +44,23 @@ module FakeNet
     def request(_request)
       script.max_retries_seen << max_retries
       step = @step
-      script.clock&.advance([step[:read_seconds], read_timeout || Float::INFINITY].min) if step[:read_seconds]
-      raise Net::ReadTimeout if step[:read_seconds] && read_timeout && step[:read_seconds] > read_timeout
+      simulate_read(step)
+      yield response_for(step)
+    end
 
+    def simulate_read(step)
+      seconds = step[:read_seconds]
+      return unless seconds
+
+      script.clock&.advance([seconds, read_timeout || Float::INFINITY].min)
+      raise Net::ReadTimeout if read_timeout && seconds > read_timeout
+    end
+
+    def response_for(step)
       response = Net::HTTPOK.new('1.1', '200', '')
       body = step[:body]
       response.define_singleton_method(:read_body) { |&block| block.call(body) }
-      yield response
+      response
     end
   end
 
@@ -66,19 +76,31 @@ module FakeNet
     end
 
     def start(_host, _port, **options)
+      connection = configured_connection(next_step, options)
+      yield connection
+    end
+
+    def next_step
       @calls += 1
       step = @steps.shift
       raise step if step.is_a?(Exception)
 
-      step = { body: step } if step.is_a?(String)
+      step.is_a?(String) ? { body: step } : step
+    end
+
+    def configured_connection(step, options)
       connection = Connection.new(self, step)
       options.each { |key, value| connection.public_send("#{key}=", value) if connection.respond_to?("#{key}=") }
+      simulate_connect(step, connection)
+      connection
+    end
+
+    def simulate_connect(step, connection)
       connect = step[:connect_seconds]
-      if connect
-        @clock.advance([connect, connection.open_timeout || Float::INFINITY].min)
-        raise Net::OpenTimeout if connection.open_timeout && connect > connection.open_timeout
-      end
-      yield connection
+      return unless connect
+
+      @clock.advance([connect, connection.open_timeout || Float::INFINITY].min)
+      raise Net::OpenTimeout if connection.open_timeout && connect > connection.open_timeout
     end
 
     def install
@@ -95,10 +117,18 @@ module FakeNet
   module_function
 
   def with(script, clock = nil)
-    clock&.install
-    script.install
+    install_pair(script, clock)
     yield
   ensure
+    uninstall_pair(script, clock)
+  end
+
+  def install_pair(script, clock)
+    clock&.install
+    script.install
+  end
+
+  def uninstall_pair(script, clock)
     script.uninstall
     clock&.uninstall
   end

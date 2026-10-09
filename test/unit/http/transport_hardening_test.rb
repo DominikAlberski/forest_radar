@@ -18,6 +18,20 @@ class TransportHardeningTest < Minitest::Test
     FakeNet.with(script, @clock, &)
   end
 
+  def record_waits
+    waits = []
+    @clock.define_singleton_method(:sleep, &wait_action(waits))
+    waits
+  end
+
+  def wait_action(waits)
+    clock = @clock
+    lambda do |seconds|
+      waits << seconds
+      clock.advance(seconds)
+    end
+  end
+
   # R3
   def test_disables_net_http_internal_retries
     script = FakeNet::Script.new('{}', clock: @clock)
@@ -27,11 +41,7 @@ class TransportHardeningTest < Minitest::Test
 
   # R3
   def test_retries_socket_error_with_half_and_one_second_waits
-    waits = []
-    @clock.define_singleton_method(:sleep) do |seconds|
-      waits << seconds
-      advance(seconds)
-    end
+    waits = record_waits
     script = FakeNet::Script.new(SocketError.new('dns'), SocketError.new('dns'), '{}', clock: @clock)
     assert_equal '{}', run_with(script) { transport.get('/x') }
     assert_equal 3, script.calls
@@ -40,14 +50,16 @@ class TransportHardeningTest < Minitest::Test
 
   # R3
   def test_socket_error_gives_up_after_three_attempts
-    script = FakeNet::Script.new(*Array.new(4) { SocketError.new('dns') }, clock: @clock)
+    script = FakeNet::Script.new(SocketError.new('dns'), SocketError.new('dns'),
+                                 SocketError.new('dns'), SocketError.new('dns'), clock: @clock)
     assert_raises(HTTP::Error) { run_with(script) { transport.get('/x') } }
     assert_equal 3, script.calls
   end
 
   # R4
   def test_retry_wait_never_passes_the_deadline
-    script = FakeNet::Script.new(*Array.new(4) { Timeout::Error.new('slow') }, clock: @clock)
+    script = FakeNet::Script.new(Timeout::Error.new('slow'), Timeout::Error.new('slow'),
+                                 Timeout::Error.new('slow'), Timeout::Error.new('slow'), clock: @clock)
     started = @clock.now
     assert_raises(HTTP::Error) { run_with(script) { transport.get('/x', deadline: started + 1.2) } }
     assert_operator @clock.now, :<=, started + 1.2

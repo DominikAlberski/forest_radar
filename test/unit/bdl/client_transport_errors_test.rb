@@ -11,7 +11,7 @@ class ClientTransportErrorsTest < Minitest::Test
       @error = error
     end
 
-    def get(_path, params:, deadline:)
+    def get(_path, **)
       raise @error
     end
   end

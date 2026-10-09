@@ -15,7 +15,7 @@ class ClientPaginationTest < Minitest::Test
     end
 
     def get(path, params:, deadline:)
-      @calls << [path, params]
+      @calls << [path, params, deadline]
       @bodies.shift or raise 'unexpected extra request'
     end
   end
@@ -29,11 +29,16 @@ class ClientPaginationTest < Minitest::Test
     [BDL::Client.new(transport: transport).features('rdlp', bbox: [0, 0, 1, 1], **), transport]
   end
 
+  def assert_deadlines(transport)
+    assert(transport.calls.all? { |_, _, deadline| deadline.is_a?(Numeric) && deadline.positive? })
+  end
+
   def test_follows_next_link_and_keeps_order
     items, transport = read(fixture('rdlp-page1.json'), fixture('rdlp-page2.json'))
     assert_equal([1, 2], items.map { |item| item['id'] })
     assert_equal '/collections/rdlp/items', transport.calls.last.first
-    assert_equal '1', transport.calls.last.last['offset']
+    assert_equal '1', transport.calls.last[1]['offset']
+    assert_deadlines(transport)
   end
 
   def test_empty_collection_is_complete

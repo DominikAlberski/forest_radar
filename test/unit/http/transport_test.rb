@@ -36,18 +36,25 @@ class TransportTest < Minitest::Test
   end
 
   class Http
+    attr_accessor :max_retries, :read_timeout
+
     def initialize(step)
       @step = step
     end
 
     def request(_request)
-      step = @step
-      response_class = step.is_a?(Integer) ? Net::HTTPResponse::CODE_TO_OBJ[step.to_s] : Net::HTTPOK
-      status = step.is_a?(Integer) ? step.to_s : '200'
-      response = response_class.new('1.1', status, '')
+      yield response_for(@step)
+    end
+
+    def response_for(step)
+      response = response_class(step).new('1.1', step.is_a?(Integer) ? step.to_s : '200', '')
       chunks = step.is_a?(Array) ? step : [step.to_s]
       response.define_singleton_method(:read_body) { |&block| chunks.each(&block) }
-      yield response
+      response
+    end
+
+    def response_class(step)
+      step.is_a?(Integer) ? Net::HTTPResponse::CODE_TO_OBJ[step.to_s] : Net::HTTPOK
     end
   end
 
@@ -93,12 +100,14 @@ class TransportTest < Minitest::Test
   end
 
   def test_exhausted_network_retries_raise_http_error
-    [Timeout::Error, IOError, Errno::ECONNRESET].each do |klass|
-      script = Script.new(klass.new, klass.new, klass.new)
-      assert_raises(HTTP::Error) { run_script(script) { transport.get('/x') } }
-      assert_equal 3, script.calls
-      assert_equal [0.5, 1.0], @sleeper.delays
-    end
+    [Timeout::Error, IOError, Errno::ECONNRESET].each { |klass| assert_network_retry(klass) }
+  end
+
+  def assert_network_retry(klass)
+    script = Script.new(klass.new, klass.new, klass.new)
+    assert_raises(HTTP::Error) { run_script(script) { transport.get('/x') } }
+    assert_equal 3, script.calls
+    assert_equal [0.5, 1.0], @sleeper.delays
   end
 
   def test_recovers_from_a_network_error
@@ -128,6 +137,10 @@ class TransportTest < Minitest::Test
 
   def test_custom_byte_limit
     assert_raises(HTTP::LimitError) { run_script(Script.new(['abcd'])) { transport(max_bytes: 3).get('/x') } }
+  end
+
+  def test_rejects_unknown_option
+    assert_raises(ArgumentError) { transport(unknown: true) }
   end
 
   def test_expired_deadline_stops_before_any_request

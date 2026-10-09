@@ -9,14 +9,13 @@ class ClientGeometryValidationTest < Minitest::Test
       @geometry = geometry
     end
 
-    def get(path, params:, deadline:)
-      items = if path.include?('wydzielenia')
-                []
-              else
-                [{ 'type' => 'Feature', 'id' => 1, 'properties' => { 'region_cd' => '17' },
-                   'geometry' => @geometry }]
-              end
+    def get(path, **)
+      items = path.include?('wydzielenia') ? [] : [region]
       { 'numberMatched' => items.length, 'features' => items, 'links' => [] }.to_json
+    end
+
+    def region
+      { 'type' => 'Feature', 'id' => 1, 'properties' => { 'region_cd' => '17' }, 'geometry' => @geometry }
     end
   end
 
