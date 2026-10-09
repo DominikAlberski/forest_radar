@@ -22,7 +22,7 @@ module Assembler
         range.dig('properties', 'name') || 'brak danych',
         distance_km: range.fetch('distance_km').round(2), district_id: range['district_id'],
         trails: range.fetch(:trails).map { |trail| trail.slice(:id, :name, :ref, :route) },
-        ban: range[:ban], stand_count: relevant.size,
+        stand_count: relevant.size,
         species: summary(relevant, 'species_cd'), sites: summary(relevant, 'site_type'),
         ages: summary(relevant, 'spec_age'), years: summary(relevant, 'a_year'),
         total_area: relevant.sum { |stand| stand['sub_area'].to_f }.round(2), missing_attributes: missing(relevant) }

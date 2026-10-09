@@ -50,12 +50,6 @@ class AppTest < Minitest::Test
     end
   end
 
-  class Bans
-    def sample(*, **)
-      { status: :no_known_ban }
-    end
-  end
-
   class Expired
     def generate(*, **)
       raise Model::Deadline, 'model deadline'
@@ -69,7 +63,7 @@ class AppTest < Minitest::Test
   def setup
     @saved = %i[search_client selector model_client search_cache].to_h { |key| [key, app.settings.public_send(key)] }
     app.set :search_cache, Cache::SearchCache.new
-    app.set :selector, WalkAreas::Selector.new(trails: Trails.new, bans: Bans.new)
+    app.set :selector, WalkAreas::Selector.new(trails: Trails.new)
     use_model(EchoHTTP.new('Sprawdź szlak przed wyjściem.'), 'configured.example')
     app.set :search_client, Search.new
   end

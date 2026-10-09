@@ -5,7 +5,6 @@ require_relative 'bdl/client'
 require_relative 'cache/search_cache'
 require_relative 'cache/session_id'
 require_relative 'walk_areas/selector'
-require_relative 'wms/ban_client'
 require_relative 'osm/client'
 require_relative 'assembler/facts'
 require_relative 'model/client'
@@ -20,7 +19,7 @@ module ForestRadar
       set :public_folder, File.expand_path('../public', __dir__)
       set :search_client, BDL::Client.new
       set :search_cache, Cache::SearchCache.new
-      set :selector, WalkAreas::Selector.new(trails: OSM::Client.new, bans: WMS::BanClient.new)
+      set :selector, WalkAreas::Selector.new(trails: OSM::Client.new)
       set :model_client, Model::Client.from_config
     end
 

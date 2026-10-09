@@ -12,16 +12,6 @@ class WalkAreaSelectorTest < Minitest::Test
     end
   end
 
-  class Bans
-    def initialize(status)
-      @status = status
-    end
-
-    def sample(_district, session_id:, deadline:)
-      { status: @status }
-    end
-  end
-
   def square(x)
     { 'type' => 'Polygon', 'coordinates' => [[[x, 0], [x + 0.01, 0], [x + 0.01, 0.01],
                                              [x, 0.01], [x, 0]]] }
@@ -35,9 +25,9 @@ class WalkAreaSelectorTest < Minitest::Test
     { id: x, name: 'Trail', ref: 'T', route: 'hiking', ways: [[[x - 0.001, 0.005], [x + 0.011, 0.005]]] }
   end
 
-  def select(ranges, relations:, ban: :no_known_ban)
-    search = { ranges: ranges, districts: [{ 'id' => 1 }] }
-    WalkAreas::Selector.new(trails: Trails.new(relations), bans: Bans.new(ban))
+  def select(ranges, relations:, districts: [])
+    search = { ranges: ranges, districts: districts }
+    WalkAreas::Selector.new(trails: Trails.new(relations))
                        .select(search: search, lat: 0, lon: 0, radius_km: 20, session_id: 's')
   end
 
@@ -47,20 +37,23 @@ class WalkAreaSelectorTest < Minitest::Test
     assert_equal [1, 2, 3], result[:areas].map { |item| item['id'] }
     assert_equal 'OpenStreetMap', result[:trail_source]
     assert_equal OSM::Client::ATTRIBUTION, result[:attribution]
+    assert result[:areas].all? { |item| item[:trails].any? }
   end
 
-  def test_disjoint_trail_excludes_range
+  def test_range_is_selected_when_district_has_no_access_data
+    result = select([range(1, 0.01, 1)], relations: [relation(0.01)], districts: [{ 'id' => 1 }])
+    assert_equal [1], result[:areas].map { |item| item['id'] }
+    assert_empty result[:excluded]
+  end
+
+  def test_disjoint_trail_excludes_range_with_no_mapped_trail
     result = select([range(1, 0.01, 1)], relations: [relation(0.1)])
     assert_empty result[:areas]
     assert_equal :no_mapped_trail, result[:excluded].first[:exclusion_reason]
   end
 
-  def test_unknown_trail_and_ban_exclude_ranges
+  def test_unavailable_trail_excludes_range
     assert_equal :trail_unavailable, select([range(1, 0.01, 1)], relations: nil)[:excluded].first[:exclusion_reason]
-    assert_equal :ban_unknown, select([range(1, 0.01, 1)], relations: [relation(0.01)],
-                                      ban: :unknown)[:excluded].first[:exclusion_reason]
-    assert_equal :known_ban, select([range(1, 0.01, 1)], relations: [relation(0.01)],
-                                    ban: :ban)[:excluded].first[:exclusion_reason]
   end
 
   def test_zero_to_two_eligible_areas
@@ -78,7 +71,7 @@ class WalkAreaSelectorTest < Minitest::Test
                            .relations(bbox: [20.6, 52.25, 20.8, 52.35])
     ranges = [first, second].map { |item| item.merge('district_id' => 398, 'distance_km' => 1) }
     search = { ranges: ranges, districts: [{ 'id' => 398 }] }
-    result = WalkAreas::Selector.new(trails: Trails.new(relations), bans: Bans.new(:no_known_ban))
+    result = WalkAreas::Selector.new(trails: Trails.new(relations))
                                 .select(search: search, lat: 52.3, lon: 20.7, radius_km: 20, session_id: 's')
     assert_equal [5157, 5172], result[:areas].map { |item| item['id'] }
     assert_includes result[:areas].first[:trails].map { |item| item[:id] }, 120876

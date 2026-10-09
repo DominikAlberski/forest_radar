@@ -22,15 +22,7 @@ The remaining URLs below are reproducible requests. Their original parameter ord
 | `walking-count.json` | `https://mapserver.bdl.lasy.gov.pl/arcgis/rest/services/WFS_BDL_mapa_turystyczna/MapServer/61/query?where=tur_line_cd%20LIKE%20%27%25PIESZ%25%27&returnCountOnly=true&f=pjson` |
 | `tourism-capabilities.xml` | `https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_BDL_Mapa_turystyczna/MapServer/WMSServer?SERVICE=WMS&REQUEST=GetCapabilities` |
 | `tourism-wms-service.json` | `https://mapserver.bdl.lasy.gov.pl/arcgis/rest/services/WMS_BDL_Mapa_turystyczna/MapServer?f=pjson` |
-| `bans-capabilities.xml` | `https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_zakazy_wstepu_do_lasu/MapServer/WMSServer?SERVICE=WMS&REQUEST=GetCapabilities` |
-| `bans-query-error.json` | `https://mapserver.bdl.lasy.gov.pl/ArcGIS/rest/services/WMS_zakazy_wstepu_do_lasu/MapServer/0/query?geometry=20.7%2C52.3&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=%2A&returnGeometry=false&f=json` |
 
 The original `trail-types.json` URL is absent from the Stage S record.
 The worker fetched the reconstructed distinct query once on 2026-10-08 at 19:35 UTC.
 The new JSON response matches the saved fixture after parsing. The exact original request remains unknown.
-The worker fetched `bans-capabilities.xml` again on 2026-10-09 from its request URL above.
-The live WMS lists only layers 0 to 2. None of those layers contains entry bans.
-The ArcGIS REST service lists entry bans as layer 0.
-The worker fetched `bans-query-error.json` on 2026-10-09 from its request URL above.
-The ArcGIS REST layer 0 query returned error code 400 with message "Failed to execute query."
-The `bans-query-empty.json` and `bans-query-feature.json` fixtures are synthetic.

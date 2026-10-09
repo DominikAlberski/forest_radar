@@ -1,7 +1,6 @@
 require_relative '../test_helper'
 require 'json'
 require 'bdl/client'
-require 'wms/ban_client'
 require 'assembler/facts'
 
 # Live contracts for the public BDL services. These tests need the network.
@@ -28,7 +27,7 @@ class BdlLiveTest < Minitest::Test
   def test_m2_card_facts_carry_the_live_range_and_district_names
     range = result.fetch(:ranges).first
     district = result.fetch(:districts).first
-    walk = { areas: [range.merge(trails: [], ban: { status: :unknown })], trail_source: 'OpenStreetMap',
+    walk = { areas: [range.merge(trails: [])], trail_source: 'OpenStreetMap',
              attribution: 'x', attribution_url: 'x' }
     facts = Assembler::Facts.new.build(result, walk)
     expected_range = range.dig('properties', 'forest_range_name')
@@ -50,15 +49,4 @@ class BdlLiveTest < Minitest::Test
     assert_equal stands.count { |item| item['missing_identifier'] }, result.fetch(:missing_identifier_count)
   end
 
-  # The live ban source returns HTTP 400 today (task fb7a8d81). The client maps that failure to
-  # "unknown". This test accepts "unknown" and records it as source-failure evidence.
-  # An "unknown" answer is NOT a pass of a known ban status (see docs/plans/m1-m7-evidence.md, L2).
-  def test_m4_ban_layer_answer_is_recorded_and_never_invented
-    district = result.fetch(:districts).first
-    answer = WMS::BanClient.new.sample(district, session_id: 'live-contract')
-    status = answer.fetch(:status)
-    assert_includes %i[ban no_known_ban unknown], status, "ban layer answer: #{answer.inspect}"
-    verdict = status == :unknown ? 'SOURCE-UNAVAILABLE (known ban status NOT proven)' : 'KNOWN-STATUS'
-    puts "EVIDENCE #{JSON.generate(check: 'm4_ban', verdict: verdict, status: status, point: answer[:point])}"
-  end
 end
