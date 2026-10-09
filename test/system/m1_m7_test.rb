@@ -127,7 +127,7 @@ class M1M7Test < Minitest::Test
 
   def test_m7_card_shows_three_nearest_areas_with_distances_and_years
     render_card
-    names = @page.eval("[...document.querySelectorAll('.area h4')].map(e => e.textContent)")
+    names = @page.eval("[...document.querySelectorAll('.area h4')].map(e => e.innerText)")
     assert_equal ['SYNTHETIC las 1', 'SYNTHETIC las 2', 'SYNTHETIC las 3'], names
     distances = @page.eval("[...document.querySelectorAll('.area .distance')].map(e => e.textContent)")
     assert_equal ['1 km', '2 km', '3 km'], distances
@@ -143,30 +143,16 @@ class M1M7Test < Minitest::Test
     assert_equal 2, @page.eval("document.querySelectorAll('.area').length")
   end
 
-  def test_m4_no_known_ban_is_not_an_access_promise
-    render_card
-    assert_includes card_text, 'Nie stwierdzono zakazu w punkcie kontrolnym nadleśnictwa. Sprawdź aktualne zasady.'
-    refute_match(/otwart|wstęp wolny|gwarant/i, card_text)
-  end
-
-  def test_m4_reported_ban_is_shown_as_a_fact
-    walk = F::Walk.new([walk_area(1, ban: { status: :ban })])
-    use(walk)
-    render_card
-    assert_includes card_text, 'Zgłoszono zakaz w punkcie kontrolnym nadleśnictwa.'
-  end
-
-  def test_unknown_ban_and_trail_evidence_are_labeled_unavailable
-    walk = F::Walk.new([walk_area(1, ban: { status: :unknown }, trails: [])])
+  def test_unknown_trail_evidence_is_labeled_unavailable
+    walk = F::Walk.new([walk_area(1, trails: [])])
     use(walk)
     render_card
     assert_includes card_text, 'Brak potwierdzonych danych o szlakach'
-    assert_includes card_text, 'Brak dostępnej informacji o zakazie'
     assert_openstreetmap_attribution
   end
 
   def test_trail_source_failure_shows_zero_areas_message_and_attribution
-    use(::WalkAreas::Selector.new(trails: F::Trails.new(nil), bans: F::Bans.new))
+    use(::WalkAreas::Selector.new(trails: F::Trails.new(nil)))
     render_card
     assert_includes card_text, 'Brak wybranych obszarów leśnych.'
     assert_openstreetmap_attribution
@@ -249,6 +235,67 @@ class M1M7Test < Minitest::Test
     assert_includes text, 'Lata danych'
   end
 
+  def test_print_hides_fifth_entry_and_shows_remaining_count
+    trails = (1..5).map { |i| { id: i, name: "SYNTHETIC entry #{i}" } }
+    use(F::Walk.new([walk_area(1, trails: trails)]))
+    render_card
+    assert_fifth_entry_screen
+    assert_fifth_entry_print
+  end
+
+  def test_print_bounds_long_text_and_preserves_safety_text
+    use(long_text_walk, model: F::Model.new(long_advice), search: F::Search.new(long_search))
+    render_card
+    assert_long_screen_text
+    assert_long_print_text(print_and_read('long-text'))
+  end
+
+  def assert_fifth_entry_screen
+    assert_includes card_text, 'SYNTHETIC entry 5'
+    assert_equal 'none', @page.eval("getComputedStyle(document.querySelector('.print-more')).display")
+  end
+
+  def assert_fifth_entry_print
+    text = print_and_read('fifth-entry')
+    refute_includes text, 'SYNTHETIC entry 5'
+    assert_includes text, 'i jeszcze 1'
+  end
+
+  def assert_long_screen_text
+    %w[AFTERADVICE AFTERTRAIL AFTERAREA AFTERDISTRICT AFTERSUMMARY].each do |marker|
+      assert_includes card_text, marker
+    end
+  end
+
+  def assert_long_print_text(text)
+    %w[BEFOREADVICE BEFORETRAIL BEFOREAREA BEFOREDISTRICT BEFORESUMMARY].each { |marker| assert_includes text, marker }
+    %w[AFTERADVICE AFTERTRAIL AFTERAREA AFTERDISTRICT AFTERSUMMARY].each { |marker| refute_includes text, marker }
+    assert_includes text, 'i jeszcze 2'
+    assert_includes text, '[pominięto dalszą część]'
+    ['OpenStreetMap', 'nie zbieraj grzyba'].each { |marker| assert_includes text, marker }
+  end
+
+  def long_advice
+    "BEFOREADVICE #{"ż\n" * 340} AFTERADVICE"
+  end
+
+  def long_text_walk
+    areas = (1..3).map do |i|
+      trails = (1..4).map { |n| { id: n, name: "BEFORETRAIL #{'ź' * 180} AFTERTRAIL #{i}-#{n}" } }
+      walk_area(i, name: "BEFOREAREA #{'ą' * 180} AFTERAREA", trails: trails)
+    end
+    F::Walk.new(areas)
+  end
+
+  def long_search
+    data = F.search(count: 3)
+    data[:stands] = (1..3).map { |i| F.stand(i, 'species_cd' => "BEFORESUMMARY #{'ś' * 180} AFTERSUMMARY") }
+    data[:districts] = (1..5).map do |i|
+      { 'id' => i, 'properties' => { 'name' => "BEFOREDISTRICT #{'ł' * 80} AFTERDISTRICT #{i}" } }
+    end
+    data
+  end
+
   def test_m7_maximum_content_card_prints_on_one_a4_page
     use(F::Walk.new((1..3).map { |i| maximal_area(i) }), search: F::Search.new(maximal_search))
     render_card
@@ -272,8 +319,8 @@ class M1M7Test < Minitest::Test
     end
   end
 
-  def walk_area(id, name: "SYNTHETIC las #{id}", ban: { status: :no_known_ban }, trails: [F.trail(0.01)])
-    { 'id' => id, 'distance_km' => id.to_f, 'district_id' => 1, 'properties' => { 'name' => name }, trails: trails, ban: ban }
+  def walk_area(id, name: "SYNTHETIC las #{id}", trails: [F.trail(0.01)])
+    { 'id' => id, 'distance_km' => id.to_f, 'district_id' => 1, 'properties' => { 'name' => name }, trails: trails }
   end
 
   # Worst case for C-R2: many distinct ages, years, species and sites, and many long trail names.

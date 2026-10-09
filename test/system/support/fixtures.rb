@@ -61,16 +61,6 @@ module SystemFixtures
     end
   end
 
-  class Bans
-    def initialize(status = :no_known_ban)
-      @status = status
-    end
-
-    def sample(*, **)
-      { status: @status }
-    end
-  end
-
   # Returns a prepared walk result, to show evidence that the real selector would exclude.
   class Walk
     def initialize(areas)
@@ -96,7 +86,7 @@ module SystemFixtures
   end
 
   def self.real_selector(count)
-    ::WalkAreas::Selector.new(trails: Trails.new((1..count).map { |i| trail(0.01 * i) }), bans: Bans.new)
+    ::WalkAreas::Selector.new(trails: Trails.new((1..count).map { |i| trail(0.01 * i) }))
   end
 
   def self.apply(search:, selector:, model: Model.new)

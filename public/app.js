@@ -33,12 +33,24 @@ function counts(value) {
   return value && Object.keys(value).length ? Object.entries(value).map(([key, count]) => `${key}: ${count}`) : [];
 }
 
+function printText(value, limit, label = '') {
+  const full = String(value);
+  const characters = Array.from(full);
+  const span = document.createElement('span');
+  span.append(node('span', full, 'screen-text'));
+  const short = characters.length > limit ? `${characters.slice(0, limit - 1).join('')}…${label}` : full;
+  span.append(node('span', short, 'print-text'));
+  return span;
+}
+
 function limitedList(parent, label, entries, fallback) {
   const row = document.createElement('p');
   row.append(node('strong', `${label}: `));
   if (!entries.length) row.append(node('span', fallback));
   entries.forEach((entry, index) => {
-    const item = node('span', `${index ? ', ' : ''}${entry}`);
+    const item = document.createElement('span');
+    if (index) item.append(', ');
+    item.append(printText(entry, 60));
     if (index >= 4) item.className = 'print-extra';
     row.append(item);
   });
@@ -51,10 +63,10 @@ function limitedList(parent, label, entries, fallback) {
 function renderArea(parent, area) {
   const block = document.createElement('article');
   block.className = 'area';
-  block.append(node('h4', area.name), node('p', `${area.distance_km} ${words.kilometers}`, 'distance'));
+  const title = document.createElement('h4');
+  title.append(printText(area.name, 60));
+  block.append(title, node('p', `${area.distance_km} ${words.kilometers}`, 'distance'));
   limitedList(block, words.trails, (area.trails || []).map(trail => trail.name || trail.ref || words.unnamed_trail), words.trail_unknown);
-  const ban = area.ban && area.ban.status;
-  line(block, words.ban, ban === 'ban' ? words.ban_reported : ban === 'no_known_ban' ? words.no_known_ban : words.ban_unknown);
   line(block, words.stands, area.stand_count);
   limitedList(block, words.species, counts(area.species), words.unavailable);
   limitedList(block, words.sites, counts(area.sites), words.unavailable);
@@ -78,7 +90,19 @@ function render(data) {
   line(evidence, words.radius_stands, facts.radius_stand_count);
   line(evidence, words.missing_ids, facts.missing_identifier_count);
   if (facts.districts && facts.districts.length) {
-    line(evidence, words.districts, facts.districts.map(district => district.name).join(', '));
+    const row = document.createElement('p');
+    row.append(node('strong', `${words.districts}: `));
+    const names = facts.districts.map(district => district.name);
+    row.append(node('span', names.join(', '), 'screen-text'));
+    const printed = document.createElement('span');
+    printed.className = 'print-text';
+    names.slice(0, 3).forEach((name, index) => {
+      if (index) printed.append(', ');
+      printed.append(printText(name, 40));
+    });
+    if (names.length > 3) printed.append(` ${words.more_count.replace('%{count}', names.length - 3)}`);
+    row.append(printed);
+    evidence.append(row);
   }
   const source = node('p', `${words.trail_source}: ${facts.trail_source || words.openstreetmap}`);
   evidence.append(source);
@@ -87,7 +111,9 @@ function render(data) {
   attribution.href = 'https://www.openstreetmap.org/copyright';
   evidence.append(attribution);
   const advice = section(content, words.advice_title);
-  advice.append(node('p', card.advice));
+  const adviceText = document.createElement('p');
+  adviceText.append(printText(card.advice, 700, ` ${words.print_omitted}`));
+  advice.append(adviceText);
   const safety = section(content, words.safety_title);
   safety.append(node('p', card.access_warning));
   safety.append(node('p', card.warning));
