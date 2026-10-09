@@ -36,7 +36,7 @@ class TransportHardeningTest < Minitest::Test
   # R3
   def test_socket_error_gives_up_after_three_attempts
     script = FakeNet::Script.new(*Array.new(4) { SocketError.new('dns') }, clock: @clock)
-    assert_raises(SocketError, HTTP::Error) { run_with(script) { transport.get('/x') } }
+    assert_raises(HTTP::Error) { run_with(script) { transport.get('/x') } }
     assert_equal 3, script.calls
   end
 

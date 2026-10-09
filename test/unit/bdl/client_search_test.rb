@@ -162,4 +162,24 @@ class ClientSearchTest < Minitest::Test
     assert_equal 2, result[:ranges].first['district_id']
     assert_equal 0.0, result[:ranges].first['distance_km']
   end
+
+  def test_search_uses_one_shared_feature_limit
+    pages = base_pages
+    pages[collection('RDLP_Warszawa_wydzielenia')] = page(Array.new(99_998) do |id|
+      feature(id, { 'a_i_num' => id }, square(20.99, 51.99, 21.01, 52.01))
+    end)
+    assert_raises(BDL::Incomplete) { search(pages) }
+  end
+
+  def test_search_detects_limit_overflow_across_collections
+    pages = base_pages
+    pages[collection('rdlp')] = page([feature(1, { 'region_cd' => '17' }, square(20.5, 51.5, 21.5, 52.5)),
+                                      feature(4, { 'region_cd' => '06' }, square(20.5, 51.5, 21.5, 52.5))])
+    pages[collection('RDLP_Warszawa_wydzielenia')] = page(Array.new(99_996) do |id|
+      feature(id, { 'a_i_num' => id }, square(20.99, 51.99, 21.01, 52.01))
+    end)
+    pages[collection('RDLP_Lodz_wydzielenia')] = page([feature(999_999, { 'a_i_num' => 999_999 },
+                                                              square(20.99, 51.99, 21.01, 52.01))])
+    assert_raises(BDL::Incomplete) { search(pages) }
+  end
 end

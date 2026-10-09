@@ -1,6 +1,6 @@
 # Data sources
 
-All endpoints below are public. No key is needed. All were checked on 2026-10-06.
+All endpoints below are public. No key is needed. BDL and Overpass contracts were rechecked on 2026-10-08.
 
 ## 1. Bank Danych o Lasach — OGC API Features
 
@@ -87,14 +87,14 @@ The layer is queryable. Ask for a point:
 
 ```text
 GET ...?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=3&QUERY_LAYERS=3
-    &INFO_FORMAT=text/html&CRS=CRS:84&BBOX=20.6,52.25,20.8,52.35&WIDTH=101&HEIGHT=101&I=50&J=50
+    &INFO_FORMAT=application/geo+json&CRS=CRS:84&BBOX=20.6,52.25,20.8,52.35&WIDTH=101&HEIGHT=101&I=50&J=50
 ```
 
-A test point in Kampinos returned an empty table. No ban was active there.
+A test point in Kampinos returned an empty GeoJSON FeatureCollection. This sample does not establish access.
 
 Notes:
 
-- There is no clean JSON endpoint. Use `INFO_FORMAT=text/html` and parse the table.
+- The checked WMS supports `INFO_FORMAT=application/geo+json`. Parse the returned FeatureCollection.
 - Treat a positive answer as a hard fact. Treat an empty answer as no known ban, not as a guarantee.
 - October bans come mostly from fire risk. The data will be sparse in other months.
 
@@ -107,7 +107,7 @@ https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_BDL_Mapa_turystyczna/MapSe
 Layers include:
 
 - areas of the program "Zanocuj w lesie"
-- hiking trails and horse trails
+- horse trails. The checked BDL tourism data supplied no verified walking-trail geometry.
 - educational paths
 - tourism infrastructure: shelters and rest areas
 - cultural heritage objects
@@ -131,7 +131,20 @@ The model derives this advice from `species_cd`, `site_type`, `spec_age`, the se
 
 The service is public and shared. Cache every response for the session. Send one request per area, not one per user action.
 
-## 7. Reference
+## 7. OpenStreetMap walking trails
+
+The application reads `route=hiking`, `route=foot`, and `route=walking` relations through Overpass.
+The checked response contains member way geometry for range 5157 and range 5172.
+The application samples entry bans at each district centre. A centre sample can miss a ban elsewhere.
+The centre can fall outside a concave district. An empty sample means no known ban at the sample point.
+The Overpass service is shared and can fail or return stale data.
+An absent route relation does not prove that no walking trail exists on the ground.
+The data licence is ODbL. Show © OpenStreetMap contributors and link to https://www.openstreetmap.org/copyright.
+
+The recorded BDL range pages report `numberMatched` values 2 and 1.
+The page-2 self link omits `offset`. The observed range IDs do not prove pagination completeness.
+
+## 8. Reference
 
 - Forest Data Bank: `https://www.bdl.lasy.gov.pl/portal/en`
 - OGC API Features training material (Polish): `https://www.ekoportal.gov.pl`

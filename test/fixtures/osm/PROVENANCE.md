@@ -3,7 +3,7 @@
 The worker requested public Overpass data on 2026-10-08 at about 19:32–19:33 UTC.
 The client sent `User-Agent: forest_radar source contract research`.
 The worker removed one trailing space before a newline in `overpass-500.html`. No content field changed.
-No successful Overpass response was available during this run.
+No successful Overpass response was available during the first request round.
 
 The worker retried sequentially on 2026-10-08 at 20:03–20:04 UTC.
 The query used `[out:json][timeout:25]` and the same User-Agent.
@@ -14,13 +14,14 @@ A later no-relation query for `(0,0,0.001,0.001)` returned HTTP 500 from that en
 
 | Fixture | Endpoint and request | Response |
 | --- | --- | --- |
-| `overpass-500.html` | GET `https://overpass.private.coffee/api/interpreter` with `data=[out:json][timeout:20];rel["type"="route"]["route"~"^(hiking|foot|walking)$"](52.25,20.6,52.35,20.8);out geom(52.25,20.6,52.35,20.8);` | HTTP 500, HTML, 646 bytes |
+| `overpass-500.html` | GET `https://overpass.private.coffee/api/interpreter` with `data=[out:json][timeout:20];rel["type"="route"]["route"~"^(hiking|foot|walking)$"](52.25,20.6,52.35,20.8);out geom(52.25,20.6,52.35,20.8);` | HTTP 500, HTML, 645 saved bytes; 646 original bytes |
 | `overpass-504.html` | GET `https://overpass-api.de/api/interpreter` with `data=[out:json][timeout:10];node(52.3,20.7,52.301,20.701);out 1;` | HTTP 504, XHTML, 695 bytes |
 | `range-sample.json` | GET `https://overpass.kumi.systems/api/interpreter` with URL encoded `data=[out:json][timeout:25];rel["type"="route"]["route"~"^(hiking|foot|walking)$"](52.25,20.6,52.35,20.8);out geom(52.25,20.6,52.35,20.8);` | HTTP 200, JSON, 337410 bytes |
 | `bdl-range-box-page2.json` | GET `https://ogcapi.bdl.lasy.gov.pl/collections/lesnictwa/items?offset=1&bbox=20.6,52.25,20.8,52.35&limit=1&f=json` | HTTP 200, GeoJSON, 719809 bytes |
 | `no-relations.json` | GET `https://overpass-api.de/api/interpreter` with URL encoded `data=[out:json][timeout:25];rel["type"="route"]["route"~"^(hiking|foot|walking)$"](0,0,0.001,0.001);out geom(0,0,0.001,0.001);` | HTTP 200, JSON, 287 bytes |
 
-Both requests used URL encoded `data` parameters. The response bytes are below 1 MiB.
+All four Overpass fixture requests used URL encoded `data` parameters. The BDL request had no `data` parameter.
+The response bytes are below 1 MiB.
 The HTTP status is part of this manifest because the saved bodies do not contain a status line.
 The worker also tried the main endpoint with the route query. It returned HTTP 504.
 The Maps Mail endpoint timed out after 20 seconds on the small probe and returned no body.

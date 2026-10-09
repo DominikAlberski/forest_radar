@@ -26,6 +26,19 @@ class ResultBuilderTest < Minitest::Test
     assert_equal 1, result[:box_stand_count]
   end
 
+  def test_missing_identifier_digest_ignores_property_key_order
+    left = stand('species_cd' => 'SO', 'site_type' => 'BM')
+    right = stand('site_type' => 'BM', 'species_cd' => 'SO')
+    assert_equal 1, build([left, right])[:stands].length
+  end
+
+  def test_missing_identifier_digest_ignores_top_level_id
+    left = stand('species_cd' => 'SO')
+    right = left.merge('id' => 999)
+    left['id'] = 1
+    assert_equal 1, build([left, right])[:stands].length
+  end
+
   def test_same_a_i_num_in_two_collections_is_kept
     pairs = [[COLLECTION, stand('a_i_num' => 7)], ['RDLP_Lodz_wydzielenia', stand('a_i_num' => 7)]]
     result = BDL::ResultBuilder.new.build(0, 0, 1, [], [], [], pairs)
