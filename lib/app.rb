@@ -16,6 +16,8 @@ module ForestRadar
     configure do
       I18n.load_path += Dir[File.expand_path('../config/locales/*.yml', __dir__)]
       I18n.default_locale = :pl
+      set :views, File.expand_path('../views', __dir__)
+      set :public_folder, File.expand_path('../public', __dir__)
       set :search_client, BDL::Client.new
       set :search_cache, Cache::SearchCache.new
       set :selector, WalkAreas::Selector.new(trails: OSM::Client.new, bans: WMS::BanClient.new)
@@ -24,8 +26,7 @@ module ForestRadar
 
     get '/' do
       content_type :html
-      '<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Leśny Radar</title></head>' \
-        '<body><main><h1>Leśny Radar</h1></main></body></html>'
+      erb :index
     end
 
     post '/api/card' do

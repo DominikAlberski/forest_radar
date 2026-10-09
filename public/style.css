@@ -1,0 +1,25 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #173229; background: #f2f5ef; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 920px; margin: auto; padding: 2rem 1rem 4rem; }
+h1, h2, h3, h4 { line-height: 1.2; margin: 0 0 .7rem; }
+p { line-height: 1.5; margin: .5rem 0; }
+a { color: #145b43; overflow-wrap: anywhere; }
+.intro { margin-bottom: 2rem; }
+.eyebrow { color: #456a56; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.panel { background: white; border: 1px solid #cad8cb; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+label { display: grid; gap: .4rem; font-weight: 650; }
+input { width: 100%; font: inherit; padding: .7rem; border: 1px solid #6a8373; border-radius: .4rem; }
+.actions, .card-head { display: flex; gap: .7rem; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 1rem; }
+button { font: inherit; border: 1px solid #235b42; color: #17432e; background: white; padding: .7rem 1rem; border-radius: .4rem; cursor: pointer; }
+button.primary { color: white; background: #235b42; }
+button:disabled { opacity: .55; cursor: wait; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #d39026; outline-offset: 2px; }
+.card-section { border-top: 1px solid #cad8cb; padding-top: 1rem; margin-top: 1rem; }
+.area { border-left: 4px solid #6c9276; padding: .3rem 1rem; margin: 1rem 0; background: #f6f8f4; break-inside: avoid; }
+.distance { font-weight: 700; }
+[hidden] { display: none !important; }
+@media (max-width: 600px) { main { padding: 1rem .75rem; } .panel { padding: 1rem; } .fields { grid-template-columns: 1fr; } .actions button { flex: 1; } }
+@page { size: A4; margin: 10mm; }
+@media print { :root { color: black; background: white; font-size: 9pt; } main { max-width: none; padding: 0; } .intro, .search, #print { display: none; } .panel { border: 0; padding: 0; margin: 0; } .card-section { padding-top: .4rem; margin-top: .4rem; } .area { margin: .4rem 0; padding: .2rem .5rem; } p { line-height: 1.25; margin: .2rem 0; } h2, h3, h4 { margin-bottom: .2rem; } a { color: black; } }
