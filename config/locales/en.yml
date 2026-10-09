@@ -34,6 +34,7 @@ en:
     location_denied: ""
     location_unavailable: ""
     unavailable: ""
+    more_count: ""
     no_areas: ""
     trails: ""
     trail_unknown: ""

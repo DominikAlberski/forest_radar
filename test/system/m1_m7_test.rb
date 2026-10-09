@@ -218,7 +218,18 @@ class M1M7Test < Minitest::Test
   end
 
   def test_request_failures_show_polish_text
-    skip 'C-R1: public/app.js shows raw browser and parser messages (known gap)'
+    [
+      "Promise.reject(new TypeError('Failed to fetch'))",
+      "Promise.resolve(new Response('{broken', { status: 200 }))"
+    ].each do |reply|
+      open_page
+      @page.eval("window.fetch = () => #{reply}")
+      submit
+      expected = 'Nie udało się przygotować karty. Spróbuj ponownie.'
+      @page.wait_for("document.getElementById('status').textContent === #{expected.to_json}")
+      assert_equal true, @page.eval("document.getElementById('result').hidden")
+      assert_equal false, @page.eval("document.querySelector('#search-form [type=submit]').disabled")
+    end
   end
 
   # ---- M7 layout ----

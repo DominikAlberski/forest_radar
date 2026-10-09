@@ -34,6 +34,7 @@ pl:
     location_denied: "Nie udało się pobrać lokalizacji. Możesz wpisać współrzędne ręcznie."
     location_unavailable: "Lokalizacja nie jest dostępna. Możesz wpisać współrzędne ręcznie."
     unavailable: "brak danych"
+    more_count: "i jeszcze %{count}"
     no_areas: "Brak wybranych obszarów leśnych. Dane o szlakach mogą być niedostępne; nie oznacza to braku szlaku w terenie."
     trails: "Szlaki"
     trail_unknown: "Brak potwierdzonych danych o szlakach"

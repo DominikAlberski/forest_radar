@@ -30,24 +30,39 @@ function line(parent, label, value) {
 }
 
 function counts(value) {
-  return value && Object.keys(value).length ? Object.entries(value).map(([key, count]) => `${key}: ${count}`).join(', ') : words.unavailable;
+  return value && Object.keys(value).length ? Object.entries(value).map(([key, count]) => `${key}: ${count}`) : [];
+}
+
+function limitedList(parent, label, entries, fallback) {
+  const row = document.createElement('p');
+  row.append(node('strong', `${label}: `));
+  if (!entries.length) row.append(node('span', fallback));
+  entries.forEach((entry, index) => {
+    const item = node('span', `${index ? ', ' : ''}${entry}`);
+    if (index >= 4) item.className = 'print-extra';
+    row.append(item);
+  });
+  if (entries.length > 4) {
+    row.append(node('span', ` ${words.more_count.replace('%{count}', entries.length - 4)}`, 'print-more'));
+  }
+  parent.append(row);
 }
 
 function renderArea(parent, area) {
   const block = document.createElement('article');
   block.className = 'area';
   block.append(node('h4', area.name), node('p', `${area.distance_km} ${words.kilometers}`, 'distance'));
-  line(block, words.trails, area.trails && area.trails.length ? area.trails.map(trail => trail.name || trail.ref || words.unnamed_trail).join(', ') : words.trail_unknown);
+  limitedList(block, words.trails, (area.trails || []).map(trail => trail.name || trail.ref || words.unnamed_trail), words.trail_unknown);
   const ban = area.ban && area.ban.status;
   line(block, words.ban, ban === 'ban' ? words.ban_reported : ban === 'no_known_ban' ? words.no_known_ban : words.ban_unknown);
   line(block, words.stands, area.stand_count);
-  line(block, words.species, counts(area.species));
-  line(block, words.sites, counts(area.sites));
-  line(block, words.ages, counts(area.ages));
-  line(block, words.years, counts(area.years));
+  limitedList(block, words.species, counts(area.species), words.unavailable);
+  limitedList(block, words.sites, counts(area.sites), words.unavailable);
+  limitedList(block, words.ages, counts(area.ages), words.unavailable);
+  limitedList(block, words.years, counts(area.years), words.unavailable);
   line(block, words.area, area.total_area);
   const missing = Object.entries(area.missing_attributes || {}).filter(([, count]) => count > 0);
-  if (missing.length) line(block, words.missing, missing.map(([key, count]) => `${words.attributes[key] || key}: ${count}`).join(', '));
+  if (missing.length) limitedList(block, words.missing, missing.map(([key, count]) => `${words.attributes[key] || key}: ${count}`), words.unavailable);
   parent.append(block);
 }
 
@@ -112,11 +127,16 @@ form.addEventListener('submit', async event => {
       body: JSON.stringify({ lat: Number(form.elements.lat.value), lon: Number(form.elements.lon.value), radius_km: Number(form.elements.radius_km.value) })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || words.error);
+    if (!response.ok) {
+      const message = typeof data?.message === 'string' && data.message.length <= 200 && data.message.trim();
+      status.textContent = message || words.error;
+      return;
+    }
     render(data);
     status.textContent = words.ready;
-  } catch (error) {
-    status.textContent = error.message || words.error;
+  } catch (_error) {
+    result.hidden = true;
+    status.textContent = words.error;
   } finally {
     search.disabled = false;
   }

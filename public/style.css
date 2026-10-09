@@ -19,7 +19,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .card-section { border-top: 1px solid #cad8cb; padding-top: 1rem; margin-top: 1rem; }
 .area { border-left: 4px solid #6c9276; padding: .3rem 1rem; margin: 1rem 0; background: #f6f8f4; break-inside: avoid; }
 .distance { font-weight: 700; }
-[hidden] { display: none !important; }
+[hidden], .print-more { display: none !important; }
 @media (max-width: 600px) { main { padding: 1rem .75rem; } .panel { padding: 1rem; } .fields { grid-template-columns: 1fr; } .actions button { flex: 1; } }
 @page { size: A4; margin: 10mm; }
-@media print { :root { color: black; background: white; font-size: 9pt; } main { max-width: none; padding: 0; } .intro, .search, #print { display: none; } .panel { border: 0; padding: 0; margin: 0; } .card-section { padding-top: .4rem; margin-top: .4rem; } .area { margin: .4rem 0; padding: .2rem .5rem; } p { line-height: 1.25; margin: .2rem 0; } h2, h3, h4 { margin-bottom: .2rem; } a { color: black; } }
+@media print { :root { color: black; background: white; font-size: 8pt; } main { max-width: none; padding: 0; } .intro, .search, #print, .print-extra { display: none; } .print-more { display: inline !important; } .panel { border: 0; padding: 0; margin: 0; } .card-section { padding-top: .25rem; margin-top: .25rem; } .area { margin: .25rem 0; padding: .1rem .4rem; } p { line-height: 1.15; margin: .1rem 0; } h2, h3, h4 { margin-bottom: .1rem; } a { color: black; } }
