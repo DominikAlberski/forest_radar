@@ -14,7 +14,7 @@ module WMS
     def sample(district, session_id:, deadline: nil, sampled_at: Time.now.utc)
       point = centre(district.fetch('geometry'))
       result = if @cache
-                 @cache.wms_fetch(session_id: session_id, layer: '3', point: point) do
+                 @cache.wms_fetch(session_id: session_id, layer: 'rest-0', point: point) do
                    query(point, deadline).merge(sampled_at: sampled_at.iso8601)
                  end
                else
@@ -47,20 +47,17 @@ module WMS
     end
 
     def query(point, deadline)
-      lon, lat = point
-      box = [lon - 0.001, lat - 0.001, lon + 0.001, lat + 0.001].join(',')
-      params = { SERVICE: 'WMS', VERSION: '1.3.0', REQUEST: 'GetFeatureInfo', LAYERS: '3', QUERY_LAYERS: '3',
-                 INFO_FORMAT: 'application/geo+json', CRS: 'CRS:84', BBOX: box,
-                 WIDTH: 101, HEIGHT: 101, I: 50, J: 50, FEATURE_COUNT: 10 }
-      data = JSON.parse(@transport.get('/ArcGIS/services/WMS_zakazy_wstepu_do_lasu/MapServer/WMSServer',
+      params = { geometry: point.join(','), geometryType: 'esriGeometryPoint', inSR: 4326,
+                 spatialRel: 'esriSpatialRelIntersects', outFields: '*',
+                 returnGeometry: false, f: 'json' }
+      data = JSON.parse(@transport.get('/ArcGIS/rest/services/WMS_zakazy_wstepu_do_lasu/MapServer/0/query',
                                        params: params, deadline: deadline))
-      raise ArgumentError, 'malformed ban response' unless data.is_a?(Hash) && data['type'] == 'FeatureCollection'
-      raise ArgumentError, 'malformed ban features' unless data['features'].is_a?(Array)
+      raise ArgumentError, 'malformed ban response' unless data.is_a?(Hash) && data['features'].is_a?(Array)
       names = data['features'].map do |feature|
         raise ArgumentError, 'malformed ban feature' unless feature.is_a?(Hash)
-        feature.fetch('properties')
+        feature.fetch('attributes')
       end
-      raise ArgumentError, 'malformed ban properties' unless names.all? { |item| item.is_a?(Hash) && !item.empty? }
+      raise ArgumentError, 'malformed ban attributes' unless names.all? { |item| item.is_a?(Hash) && !item.empty? }
       { status: names.empty? ? :no_known_ban : :ban, bans: names }
     end
   end

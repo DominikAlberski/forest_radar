@@ -164,29 +164,6 @@
           </LegendURL>
         </Style>
       </Layer>
-      <Layer queryable="1">
-        <Name>3</Name>
-        <Title><![CDATA[Okresowy zakaz wstępu do lasu wprowadza się ze względu na:]]></Title>
-        <Abstract><![CDATA[]]></Abstract>
-<CRS>CRS:84</CRS>
-<CRS>EPSG:4326</CRS>
-<CRS>EPSG:3857</CRS>
- <!-- alias 3857 -->
-<CRS>EPSG:102100</CRS>
-<EX_GeographicBoundingBox><westBoundLongitude>13.897790</westBoundLongitude><eastBoundLongitude>24.621296</eastBoundLongitude><southBoundLatitude>49.021688</southBoundLatitude><northBoundLatitude>54.837848</northBoundLatitude></EX_GeographicBoundingBox>
-<BoundingBox CRS="CRS:84" minx="13.897790" miny="49.021688" maxx="24.621296" maxy="54.837848"/>
-<BoundingBox CRS="EPSG:4326" minx="49.021688" miny="13.897790" maxx="54.837848" maxy="24.621296"/>
-<BoundingBox CRS="EPSG:3857" minx="1547094.891220" miny="6278542.268958" maxx="2740830.158946" maxy="7330459.020557"/>
-<BoundingBox CRS="EPSG:102100" minx="1547094.891220" miny="6278542.268958" maxx="2740830.158946" maxy="7330459.020557"/>
-        <Style>
-          <Name>default</Name>
-          <Title><![CDATA[Okresowy zakaz wstępu do lasu wprowadza się ze względu na:]]></Title>
-          <LegendURL width="258" height="54">
-            <Format>image/png</Format>
-            <OnlineResource xlink:href="http://mapserver.bdl.lasy.gov.pl/arcgis/services/WMS_zakazy_wstepu_do_lasu/MapServer/WMSServer?request=GetLegendGraphic%26version=1.3.0%26format=image/png%26layer=3" xlink:type="simple" xmlns:xlink="http://www.w3.org/1999/xlink" />
-          </LegendURL>
-        </Style>
-      </Layer>
     </Layer>
   </Capability>
 </WMS_Capabilities>

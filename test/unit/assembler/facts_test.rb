@@ -17,4 +17,15 @@ class FactsTest < Minitest::Test
     assert_equal 3, facts[:box_stand_count]
     assert Assembler::Facts.new.lines(facts).values.any? { |value| value.include?('distance_km=1.2') }
   end
+
+  def test_uses_live_range_and_district_names
+    search = { stands: [], districts: [{ 'id' => 2, 'properties' => { 'inspectorate_name' => 'Jabłonna' } }],
+               box_stand_count: 0, radius_stand_count: 0, missing_identifier_count: 0 }
+    walk = { areas: [{ 'id' => 1, 'distance_km' => 1, 'properties' => { 'forest_range_name' => 'Bagno' },
+                       trails: [], ban: { status: :unknown } }], trail_source: 'OpenStreetMap',
+             attribution: 'OSM', attribution_url: 'https://example.org' }
+    facts = Assembler::Facts.new.build(search, walk)
+    assert_equal 'Bagno', facts[:areas].first[:name]
+    assert_equal 'Jabłonna', facts[:districts].first[:name]
+  end
 end

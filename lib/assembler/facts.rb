@@ -18,7 +18,8 @@ module Assembler
 
     def area(range, stands)
       relevant = stands.select { |stand| stand['range_id'] == range['id'] && stand['in_radius'] == true }
-      { id: range['id'], name: range.dig('properties', 'name') || 'brak danych',
+      { id: range['id'], name: range.dig('properties', 'forest_range_name') ||
+        range.dig('properties', 'name') || 'brak danych',
         distance_km: range.fetch('distance_km').round(2), district_id: range['district_id'],
         trails: range.fetch(:trails).map { |trail| trail.slice(:id, :name, :ref, :route) },
         ban: range[:ban], stand_count: relevant.size,
@@ -38,7 +39,8 @@ module Assembler
     end
 
     def district(item, stands)
-      { id: item['id'], name: item.dig('properties', 'name') || 'brak danych',
+      { id: item['id'], name: item.dig('properties', 'inspectorate_name') ||
+        item.dig('properties', 'name') || 'brak danych',
         address: item.dig('properties', 'adress_forest') || 'brak danych',
         stand_count: stands.count { |stand| stand['district_id'] == item['id'] } }
     end
