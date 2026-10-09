@@ -83,4 +83,66 @@ class ModelClientTest < Minitest::Test
     assert_raises(Model::Deadline) { client.generate({}, deadline: 0) }
     assert_empty http.calls
   end
+
+  class ScriptedHTTP < RecordedHTTP
+    attr_reader :timeouts
+
+    def initialize(bodies, delay)
+      super(nil)
+      @bodies, @delay, @timeouts = bodies, delay, []
+    end
+
+    def start(host, port, **options)
+      @timeouts << options[:read_timeout]
+      super
+    end
+
+    def post(path, body, headers)
+      sleep @delay
+      @body = @bodies.shift
+      super
+    end
+  end
+
+  class HangingHTTP < RecordedHTTP
+    attr_reader :finished
+
+    def post(path, body, headers)
+      sleep 0.4
+      @finished = true
+      super
+    end
+  end
+
+  def clock
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  end
+
+  def test_expired_deadline_interrupts_the_delayed_operation
+    http = HangingHTTP.new('{}')
+    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
+    started = clock
+    assert_raises(Model::Deadline) { client.generate({ 'F1' => 'x=1' }, deadline: started + 0.05) }
+    assert_operator clock - started, :<, 0.3
+    sleep 0.5
+    refute http.finished, 'the delayed request kept running after expiry'
+  end
+
+  def test_retry_starts_with_reduced_remaining_budget
+    invalid = File.read(File.expand_path('../../fixtures/model/invalid-response.json', __dir__))
+    http = ScriptedHTTP.new([invalid, invalid], 0.1)
+    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
+    assert_raises(Model::Invalid) { client.generate({ 'F1' => 'x=1' }, deadline: clock + 5) }
+    first, second = http.timeouts
+    assert_operator first - second, :>=, 0.08
+    assert_operator second, :<, 5
+  end
+
+  def test_retry_with_little_budget_left_is_cut_off_at_the_deadline
+    invalid = File.read(File.expand_path('../../fixtures/model/invalid-response.json', __dir__))
+    http = ScriptedHTTP.new([invalid, invalid], 0.1)
+    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
+    assert_raises(Model::Deadline) { client.generate({ 'F1' => 'x=1' }, deadline: clock + 0.15) }
+    assert_operator http.timeouts.last, :<, 0.07
+  end
 end

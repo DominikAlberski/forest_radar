@@ -23,7 +23,7 @@ class ModelValidatorTest < Minitest::Test
     phrases = [
       'Ten grzyb jest jadalny.', 'Ten grzyb jest niejadalny.', 'Ten grzyb jest trujący.',
       'Te grzyby nadają się do spożycia.', 'Te grzyby możesz jeść.',
-      'Te grzyby są bezpieczne do jedzenia.', 'Las jest otwarty.',
+      'Te grzyby są bezpieczne do jedzenia.', 'Las jest otwarty.', 'Lasy są otwarte.', 'Wstęp wolny.',
       'Wstęp jest wolny.', 'Do lasu można wejść.', 'Dostęp gwarantowany.'
     ]
     phrases.each do |phrase|

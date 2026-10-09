@@ -163,6 +163,6 @@ The `Gemfile` holds the gems below. The author approved these.
 
 ## Why open innovation matters
 
-The forest data is public. The model is open-weight. The inference is local. A closed cloud API would send the location of the user to a third party and charge per token. This design sends nothing. The user can also swap the model in one line of config. That freedom is the point.
+The forest data is public. The model is open-weight. The inference is local. A closed cloud API would send the facts to a third party and charge per token. The location still leaves the machine in three places. BDL and the Overpass API receive a bounding box around it. The configured model host receives the fact block. Google Maps receives the location only after the user opens the sanitary station link. A local model host keeps the fact block on the machine. The user can also swap the model in one line of config. That freedom is the point.
 
 This is the story for the DEV post. See `docs/blog-outline.md`.
