@@ -73,7 +73,9 @@ module SystemFixtures
       @areas = areas
     end
 
-    def select(**)
+    def select(search:, **)
+      raise ArgumentError, 'search data is required' unless search
+
       { areas: @areas.map { |area| area.merge('distance_km' => area['distance_km']) }, excluded: [],
         trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
         attribution_url: OSM::Client::COPYRIGHT_URL }

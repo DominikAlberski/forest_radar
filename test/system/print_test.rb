@@ -6,7 +6,7 @@ require_relative 'support/browser_behavior_helpers'
 require_relative 'support/browser_card_helpers'
 require_relative 'support/browser_fact_helpers'
 require_relative 'support/browser_print_data_helpers'
-class PrintTestTest < BrowserTestCase
+class PrintTest < BrowserTestCase
   include BrowserCoreHelpers
   include BrowserBehaviorHelpers
   include BrowserCardHelpers
@@ -32,6 +32,7 @@ class PrintTestTest < BrowserTestCase
   end
 
   def test_print_bounds_long_text_and_preserves_safety_text
+    assert_equal 3000, long_advice.length
     use(long_text_walk, model: F::Model.new(long_advice), search: F::Search.new(long_search))
     render_card
     assert_long_screen_text

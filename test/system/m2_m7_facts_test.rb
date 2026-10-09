@@ -6,7 +6,7 @@ require_relative 'support/browser_behavior_helpers'
 require_relative 'support/browser_card_helpers'
 require_relative 'support/browser_fact_helpers'
 require_relative 'support/browser_print_data_helpers'
-class M2M7FactsTestTest < BrowserTestCase
+class M2M7FactsTest < BrowserTestCase
   include BrowserCoreHelpers
   include BrowserBehaviorHelpers
   include BrowserCardHelpers

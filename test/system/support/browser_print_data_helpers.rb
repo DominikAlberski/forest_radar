@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
+require 'open3'
+
 module BrowserPrintDataHelpers
   F = BrowserTestCase::F
   PDFINFO = BrowserTestCase::PDFINFO
   PDFTOTEXT = BrowserTestCase::PDFTOTEXT
 
   def long_advice
-    "#{'ż ' * 342}ż  BEFOREADVICE AFTERADVICE #{'ż ' * 1140}ż"
+    "#{'ż ' * 343}żBEFOREADVICE AFTERADVICE #{'ż' * 2288}"
   end
 
   def long_text_walk
@@ -19,7 +21,7 @@ module BrowserPrintDataHelpers
   end
 
   def long_trails(area_id)
-    (1..4).map { |trail_id| { id: trail_id, name: "#{'ź ' * 24}BEFORETRAIL AFTERTRAIL#{area_id}-#{trail_id}" } }
+    (1..5).map { |trail_id| { id: trail_id, name: "#{'ź ' * 24}BEFORETRAIL AFTERTRAIL#{area_id}-#{trail_id}" } }
   end
 
   def long_search

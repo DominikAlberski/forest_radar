@@ -36,10 +36,19 @@ module BrowserCardHelpers
     %w[AFTERADVICE AFTERTRAIL AFTERAREA AFTERDISTRICT AFTERSUMMARY].each do |marker|
       assert_includes card_text, marker
     end
+    assert_operator @page.evaluate("document.querySelectorAll('.print-more').length"), :>, 0
+    assert_long_advice_ellipsis
+  end
+
+  def assert_long_advice_ellipsis
+    script = "[...document.querySelectorAll('.print-text')].map(element => element.textContent).join(' ')"
+    printed_text = @page.evaluate(script)
+    assert_includes printed_text, 'BEFOREADVICE…'
   end
 
   def assert_long_print_text(text)
     assert_long_boundaries(text)
+    assert_long_ellipses(text)
     assert_long_context(text)
     assert_full_safety_text(text)
   end
@@ -47,6 +56,13 @@ module BrowserCardHelpers
   def assert_long_boundaries(text)
     %w[BEFOREADVICE BEFORETRAIL BEFOREAREA BEFOREDISTRICT BEFORESUMMARY].each { |marker| assert_includes text, marker }
     %w[AFTERADVICE AFTERTRAIL AFTERAREA AFTERDISTRICT AFTERSUMMARY].each { |marker| refute_includes text, marker }
+  end
+
+  def assert_long_ellipses(text)
+    %w[BEFOREADVICE BEFORETRAIL BEFOREAREA BEFOREDISTRICT].each do |marker|
+      assert_includes text, "#{marker}…"
+    end
+    assert_includes text, '[pominięto dalszą część]'
   end
 
   def assert_long_context(text)
