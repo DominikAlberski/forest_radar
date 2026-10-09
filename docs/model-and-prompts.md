@@ -143,7 +143,7 @@ Known risks to record:
 
 - The model names a mushroom for a site type where that mushroom does not grow.
 - The model ignores the edibility rule and writes "jadalny".
-- The model states an entry rule that the ban layer does not support.
+- The model states an entry rule without source evidence.
 - The model invents a district name.
 - The model reports a dog rule as a fact, when the rule depends on the district and the season.
 

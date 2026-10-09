@@ -19,7 +19,7 @@ Browser (one Polish page, printable card)
 Geo layer        pick the RDLP regions that cover the radius
    ▼
 BDL client       OGC API Features → stands, districts, ranges
-                 WMS → entry bans, trails, camping areas
+Overpass         OpenStreetMap → mapped walking trails
    ▼
 Assembler        shape the data into a compact fact block
    ▼
@@ -75,7 +75,7 @@ The response holds the raw facts and the model text apart. Keep both. This shows
 | Service | Call | Purpose |
 | --- | --- | --- |
 | BDL OGC API | `GET /collections/{id}/items?bbox=...` | Stands and districts in the box |
-| BDL WMS | `GetFeatureInfo` on the ban layer | Is the walk area closed? |
+| Overpass API | Walking route relations in the box | Find mapped trails that cross ranges |
 
 See `docs/data-sources.md` for every endpoint and a verified sample.
 
@@ -136,7 +136,8 @@ The `Gemfile` holds the gems below. The author approved these.
 1. The page reads the location and the radius from the user. Green or Red.
 2. The program picks the RDLP region or regions for the location. Green or Red.
 3. The program reads the stands and the districts in the box. Green or Red.
-4. The program checks the entry ban layer for the box. Green or Red.
+4. The program checks for mapped walking trails that cross the ranges. Green or Red.
+M4 changed on 2026-10-09 from the ban layer to trail crossing. See [ADR 0007](docs/decisions/0007-remove-entry-ban-check.md).
 5. The model returns a Polish trip card from the fact block. Green or Red.
 6. The card holds the mushroom warning and the sanitary station link. Green or Red.
 7. The card is printable and readable on a phone. Green or Red.
@@ -153,7 +154,6 @@ The `Gemfile` holds the gems below. The author approved these.
 
 ## Pitfalls
 
-- **P1 — the entry ban layer is WMS only.** There is no clean JSON endpoint. Use `GetFeatureInfo`. Treat the answer as best effort. Say so in the card.
 - **P2 — the stand data is split by RDLP region.** Seventeen collections hold the stands. Pick the region by a point-in-polygon test against the `rdlp` collection. A radius can cross two regions.
 - **P3 — the stand attributes use Polish forestry codes.** `species_cd` holds `SO` for pine. `site_type` holds `BMŚW` for a fresh mixed conifer site. The model can decode these. A small dictionary is more reliable for the hard facts.
 - **P4 — Ollama binds to localhost by default.** Set `OLLAMA_HOST=0.0.0.0` on the model host. Otherwise the app cannot reach it.

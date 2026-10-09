@@ -2,7 +2,7 @@
 
 A forest walk advisor for Poland. It finds forests near the user and says what to look for there.
 
-The user gives a location and a radius. The program asks the Bank Danych o Lasach for the forests in that radius. The program sends the findings to a local open-weight model. The model writes a short trip card in Polish: which forest, what grows there, what animals live there, and which entry-ban evidence the sources hold. The card makes no promise that a forest is open and no promise about dogs.
+The user gives a location and a radius. The program asks the Bank Danych o Lasach for the forests in that radius. The program sends the findings to a local open-weight model. The model writes a short trip card in Polish: which forest, what grows there, and what animals live there. The card makes no promise that a forest is open and no promise about dogs.
 
 The repository name is `forest_radar`.
 
@@ -77,14 +77,13 @@ The model host is read from this file only. A request can never choose it. Ollam
 
 ### Cache limits
 
-The server keeps source answers in memory, per browser session cookie. The limits are 256 entries and 128 MiB. A search answer lives 30 minutes. A ban-layer answer lives 5 minutes. A restart clears the cache.
+The server keeps source answers in memory, per browser session cookie. The limits are 256 entries and 128 MiB. A search answer lives 30 minutes. A restart clears the cache.
 
 ### Source limitations
 
-- The card shows at most three forest ranges. Each range needs an OpenStreetMap trail that crosses it and a ban layer answer.
-- The ban layer is sampled at the centre of the forest district. The answer says nothing about the whole range. The card never says a forest is open.
+- The card shows at most three forest ranges. Each range needs an OpenStreetMap trail that crosses it. The card never says a forest is open.
 - A BDL retrieval failure, a model failure, or a missing region gives an error message and no card.
-- Unavailable OpenStreetMap trail evidence or an unavailable ban layer answer is not fatal. Such a range is not selected. If no range remains, the card shows the Polish zero-areas message, the OpenStreetMap attribution, the safety warnings, and the model advice. It does not mean that the forest has no trail or no ban.
+- Unavailable OpenStreetMap trail evidence is not fatal. Such a range is not selected. If no range remains, the card shows the Polish zero-areas message, the OpenStreetMap attribution, the safety warnings, and the model advice. It does not mean that the forest has no trail.
 - Trail data comes from OpenStreetMap through the Overpass API. The card shows the OpenStreetMap attribution and the copyright link.
 - The model deadline is 29 seconds for one card.
 
@@ -94,7 +93,7 @@ The location does not stay on one machine.
 
 - The Bank Danych o Lasach (BDL) receives a query with a bounding box around the location.
 - The Overpass API receives a query with the same bounding box.
-- The configured model host receives the fact block. The block holds distances, stand data, and ban evidence, not the raw coordinates. With `client: stub` no host receives it. A remote model host sees the facts. Use a host you control.
+- The configured model host receives the fact block. The block holds distances and stand data, not the raw coordinates. With `client: stub` no host receives it. A remote model host sees the facts. Use a host you control.
 - Google Maps receives the location only after the user opens the sanitary station link.
 
 ## Tests
@@ -131,8 +130,8 @@ The harness starts its own Chrome with a temporary profile and a Ruby driver ove
 
 ### Live prerequisites (`--live`)
 
-- Network access to `ogcapi.bdl.lasy.gov.pl` and `mapserver.bdl.lasy.gov.pl`.
-- `OLLAMA_URL` and `OLLAMA_HOST_HARDWARE`. `OLLAMA_MODEL` is optional. A missing endpoint fails the suite. The live ban source returns HTTP 400 today, so the live ban check records `unknown` as source-failure evidence. The Polish check on model output is a smoke check. Live M5 needs a recorded human language review.
+- Network access to `ogcapi.bdl.lasy.gov.pl` and the configured model host.
+- `OLLAMA_URL` and `OLLAMA_HOST_HARDWARE`. `OLLAMA_MODEL` is optional. A missing endpoint fails the suite. The Polish check on model output is a smoke check. Live M5 needs a recorded human language review.
 
 The evidence record is `docs/plans/m1-m7-evidence.md`.
 

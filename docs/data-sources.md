@@ -75,30 +75,11 @@ The queryable fields are at `GET /collections/{id}/queryables?f=json`.
 
 `a_i_num` starts with the region code. `17` is Warszawa. `17-05` is the district. Use `a_i_num` to group the stands by district.
 
-## 2. Entry bans — WMS
+### Entry bans (removed)
 
-```text
-https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_zakazy_wstepu_do_lasu/MapServer/WMSServer
-```
+The entry ban check was removed because the live BDL layer returns HTTP 400 and cannot provide reliable access evidence. See [ADR 0007](decisions/0007-remove-entry-ban-check.md).
 
-The layer set: the districts, the RDLP boundaries, and the periodic entry bans.
-
-The layer is queryable. Ask for a point:
-
-```text
-GET ...?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo&LAYERS=3&QUERY_LAYERS=3
-    &INFO_FORMAT=application/geo+json&CRS=CRS:84&BBOX=20.6,52.25,20.8,52.35&WIDTH=101&HEIGHT=101&I=50&J=50
-```
-
-A test point in Kampinos returned an empty GeoJSON FeatureCollection. This sample does not establish access.
-
-Notes:
-
-- The checked WMS supports `INFO_FORMAT=application/geo+json`. Parse the returned FeatureCollection.
-- Treat a positive answer as a hard fact. Treat an empty answer as no known ban, not as a guarantee.
-- October bans come mostly from fire risk. The data will be sparse in other months.
-
-## 3. Tourist data — WMS
+## 2. Tourist data — WMS
 
 ```text
 https://mapserver.bdl.lasy.gov.pl/ArcGIS/services/WMS_BDL_Mapa_turystyczna/MapServer/WMSServer
@@ -112,7 +93,7 @@ Layers include:
 - tourism infrastructure: shelters and rest areas
 - cultural heritage objects
 
-## 4. Other BDL services
+## 3. Other BDL services
 
 | Service | Address | Use |
 | --- | --- | --- |
@@ -121,22 +102,20 @@ Layers include:
 | WFS | `https://wfs.bdl.lasy.gov.pl/geoserver/BDL/ows` | An alternative to OGC API |
 | Portal | `https://www.bdl.lasy.gov.pl/portal/` | Manual download of shapefiles |
 
-## 5. What the data does NOT hold
+## 4. What the data does NOT hold
 
 The API has no field for mushrooms, for berries, for dogs, or for animal tracks. Do not look for these fields.
 
 The model derives this advice from `species_cd`, `site_type`, `spec_age`, the season, and the region. This is inference, not data. The card must say so.
 
-## 6. Politeness
+## 5. Politeness
 
 The service is public and shared. Cache every response for the session. Send one request per area, not one per user action.
 
-## 7. OpenStreetMap walking trails
+## 6. OpenStreetMap walking trails
 
 The application reads `route=hiking`, `route=foot`, and `route=walking` relations through Overpass.
 The checked response contains member way geometry for range 5157 and range 5172.
-The application samples entry bans at each district centre. A centre sample can miss a ban elsewhere.
-The centre can fall outside a concave district. An empty sample means no known ban at the sample point.
 The Overpass service is shared and can fail or return stale data.
 An absent route relation does not prove that no walking trail exists on the ground.
 The data licence is ODbL. Show © OpenStreetMap contributors and link to https://www.openstreetmap.org/copyright.
@@ -144,7 +123,7 @@ The data licence is ODbL. Show © OpenStreetMap contributors and link to https:/
 The recorded BDL range pages report `numberMatched` values 2 and 1.
 The page-2 self link omits `offset`. The observed range IDs do not prove pagination completeness.
 
-## 8. Reference
+## 7. Reference
 
 - Forest Data Bank: `https://www.bdl.lasy.gov.pl/portal/en`
 - OGC API Features training material (Polish): `https://www.ekoportal.gov.pl`

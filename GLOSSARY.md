@@ -70,8 +70,8 @@ _Avoid_: safety call, mushroom verdict
 ## The program
 
 **Forest walk area**
-A forest range selected for a walk, with a mapped walking trail crossing the range and no known entry ban.
-These listing signals do not prove permission to enter; the user must check current local access before the walk.
+A forest range selected for a walk, with a mapped walking trail crossing the range.
+This listing signal does not prove permission to enter; the user must check current local access before the walk.
 _Avoid_: forest stand as destination, guaranteed access
 
 **Trip card**
