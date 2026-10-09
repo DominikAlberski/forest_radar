@@ -2,52 +2,75 @@
 
 require_relative '../geo/geometry'
 require_relative '../osm/client'
+require_relative 'trail_crossing'
 
+# Selects nearby forest ranges from mapped trail evidence.
 module WalkAreas
+  # Holds the search center and radius for range selection.
+  Area = Struct.new(:lat, :lon, :radius_km, keyword_init: true) do
+    def bbox
+      Geo::Geometry.bbox(lat, lon, radius_km)
+    end
+
+    def selection_arguments
+      [bbox, radius_km]
+    end
+  end
+
+  # Builds one candidate range from source data and mapped trails.
+  Candidate = Struct.new(:range, :relations, :radius) do
+    def selected
+      return unless within_radius?
+
+      paths = relations && TrailCrossing.new(range.fetch('geometry')).matching(relations)
+      range.merge(trails: paths || [], exclusion_reason: exclusion(paths))
+    end
+
+    private
+
+    def within_radius?
+      range.fetch('distance_km') <= radius
+    end
+
+    def exclusion(paths)
+      return :trail_unavailable unless relations
+
+      :no_mapped_trail if paths.empty?
+    end
+  end
+  private_constant :Candidate
+
+  # Provides the stable ordering key for one selected range.
+  AreaOrder = Struct.new(:area) do
+    def key
+      distance, identifier = area.values_at('distance_km', 'id')
+      [distance, identifier.to_s]
+    end
+  end
+  private_constant :AreaOrder
+
+  # Partitions and orders candidate forest ranges for the response.
+  SelectionResult = Struct.new(:selected) do
+    def to_h
+      eligible, excluded = selected.partition { |range| !range[:exclusion_reason] }
+      areas = eligible.sort_by { |item| AreaOrder.new(item).key }.first(3)
+      { areas: areas, excluded: excluded, trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
+        attribution_url: OSM::Client::COPYRIGHT_URL }
+    end
+  end
+  private_constant :SelectionResult
+
+  # Chooses nearby forest ranges crossed by mapped walking trails.
   class Selector
     def initialize(trails:)
       @trails = trails
     end
 
-    def select(search:, lat:, lon:, radius_km:, session_id:, deadline: nil)
-      box = Geo::Geometry.bbox(lat, lon, radius_km)
+    def select(search:, area:, deadline: nil)
+      box, radius = area.selection_arguments
       relations = @trails.relations(bbox: box, deadline: deadline)
-      eligible = []
-      excluded = []
-      search.fetch(:ranges).each do |range|
-        next if range.fetch('distance_km') > radius_km
-
-        trails = relations&.select { |relation| crosses?(relation, range.fetch('geometry')) }
-        reason = exclusion(trails)
-        (reason ? excluded : eligible) << range.merge(trails: trails || [], exclusion_reason: reason)
-      end
-      { areas: eligible.sort_by { |item| [item['distance_km'], item['id'].to_s] }.first(3),
-        excluded: excluded, trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
-        attribution_url: OSM::Client::COPYRIGHT_URL }
-    end
-
-    private
-
-    def exclusion(trails)
-      return :trail_unavailable unless trails
-
-      :no_mapped_trail if trails.empty?
-    end
-
-    def crosses?(relation, polygon)
-      rings = Geo::Geometry.polygons(polygon).flat_map(&:itself)
-      points = rings.flatten(1)
-      west, east = points.map(&:first).minmax
-      south, north = points.map(&:last).minmax
-      relation[:ways].any? do |way|
-        way.each_cons(2).any? do |a, b|
-          next false if [a[0], b[0]].max < west || [a[0], b[0]].min > east ||
-                        [a[1], b[1]].max < south || [a[1], b[1]].min > north
-
-          Geo::Geometry.contains?(polygon, a) || Geo::Geometry.contains?(polygon, b) ||
-            rings.any? { |ring| ring.each_cons(2).any? { |c, d| Geo::Geometry.crossing?(a, b, c, d) } }
-        end
-      end
+      selected = search.fetch(:ranges).filter_map { |range| Candidate.new(range, relations, radius).selected }
+      SelectionResult.new(selected).to_h
     end
   end
 end

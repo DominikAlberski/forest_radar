@@ -3,6 +3,7 @@
 require 'securerandom'
 
 module Cache
+  # Creates and validates browser session identifiers.
   module SessionId
     COOKIE = 'forest_radar_session'
 

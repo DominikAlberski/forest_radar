@@ -41,11 +41,21 @@ class AppTest < Minitest::Test
     def search(**)
       raise @error if @error
 
-      { ranges: [{ 'id' => 1, 'geometry' => SQUARE, 'district_id' => 1, 'distance_km' => 1.0,
-                   'properties' => { 'name' => 'Las testowy' } }],
-        districts: [{ 'id' => 1, 'properties' => { 'name' => 'Nadleśnictwo' } }],
-        stands: [{ 'range_id' => 1, 'in_radius' => true, 'species_cd' => 'SO', 'a_year' => 2024, 'sub_area' => 1.5 }],
+      { ranges: ranges, districts: districts, stands: stands,
         box_stand_count: 1, radius_stand_count: 1, missing_identifier_count: 0 }
+    end
+
+    def ranges
+      [{ 'id' => 1, 'geometry' => SQUARE, 'district_id' => 1, 'distance_km' => 1.0,
+         'properties' => { 'name' => 'Las testowy' } }]
+    end
+
+    def districts
+      [{ 'id' => 1, 'properties' => { 'name' => 'Nadleśnictwo' } }]
+    end
+
+    def stands
+      [{ 'range_id' => 1, 'in_radius' => true, 'species_cd' => 'SO', 'a_year' => 2024, 'sub_area' => 1.5 }]
     end
   end
 
@@ -92,11 +102,14 @@ class AppTest < Minitest::Test
 
   def test_invalid_boundary_values
     [{ lat: 'NaN', lon: 0, radius_km: 1 }, { lat: 91, lon: 0, radius_km: 1 },
-     { lat: 0, lon: -181, radius_km: 1 }, { lat: 0, lon: 0, radius_km: 21 }].each do |input|
-      post '/api/card', JSON.generate(input), HOST
-      assert_equal 422, last_response.status
-      refute_includes JSON.parse(last_response.body), 'card'
-    end
+     { lat: 0, lon: -181, radius_km: 1 }, { lat: 0, lon: 0, radius_km: 21 }]
+      .each { |input| assert_invalid_input(input) }
+  end
+
+  def assert_invalid_input(input)
+    post '/api/card', JSON.generate(input), HOST
+    assert_equal 422, last_response.status
+    refute_includes JSON.parse(last_response.body), 'card'
   end
 
   def test_model_host_is_not_read_from_request
@@ -111,6 +124,10 @@ class AppTest < Minitest::Test
     card
     body = JSON.parse(last_response.body)
     assert_equal 200, last_response.status
+    assert_card_body(body)
+  end
+
+  def assert_card_body(body)
     assert_equal(['Las testowy'], body['facts']['areas'].map { |area| area['name'] })
     assert_equal 'Sprawdź szlak przed wyjściem.', body['card']['advice']
     assert_includes body['card']['warning'], 'nie zbieraj grzyba'
@@ -119,12 +136,14 @@ class AppTest < Minitest::Test
 
   def test_error_responses_hold_no_card
     cases = { 'no_coverage' => [BDL::NoCoverage, 422], 'source' => [BDL::Incomplete, 502] }
-    cases.each do |key, (klass, status)|
-      app.set :search_client, Search.new(klass.new('x'))
-      card
-      assert_equal status, last_response.status
-      assert_error key
-    end
+    cases.each { |key, (klass, status)| assert_search_error(key, klass, status) }
+  end
+
+  def assert_search_error(key, klass, status)
+    app.set :search_client, Search.new(klass.new('x'))
+    card
+    assert_equal status, last_response.status
+    assert_error key
   end
 
   def test_invalid_model_output_returns_model_error_without_card

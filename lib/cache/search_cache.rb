@@ -5,28 +5,25 @@ require 'json'
 require_relative 'session_cache'
 
 module Cache
+  # Stores search results by session and request coordinates.
   class SearchCache
     def initialize(store: SessionCache.new)
       @store = store
     end
 
-    def fetch(session_id:, lat:, lon:, radius_km:, query:, ttl: 1800)
-      key = Digest::SHA256.hexdigest(JSON.generate([session_id, lat, lon, radius_km, query]))
+    def fetch(request, ttl: 1800, &)
+      key = Digest::SHA256.hexdigest(JSON.generate(request))
       cached = @store.read(key)
       return cached if cached
 
-      result = yield
-      @store.write(key, result, ttl: ttl)
-      result
+      store(key, ttl, &)
     end
 
-    def wms_fetch(session_id:, layer:, point:, ttl: 300)
-      key = Digest::SHA256.hexdigest(JSON.generate([session_id, layer, point]))
-      cached = @store.read(key)
-      return cached if cached
+    private
 
+    def store(key, ttl)
       result = yield
-      @store.write(key, result, ttl: ttl) if result
+      @store.write(key, result, ttl: ttl)
       result
     end
   end

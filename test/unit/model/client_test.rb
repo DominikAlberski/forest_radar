@@ -56,8 +56,7 @@ class ModelClientTest < Minitest::Test
   end
 
   def test_recorded_ollama_response
-    fixture = File.read(File.expand_path('../../fixtures/model/valid-response.json', __dir__))
-    http = RecordedHTTP.new(fixture)
+    http = RecordedHTTP.new(fixture('valid-response.json'))
     client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
     assert_equal 'Sprawdź warunki w terenie.', client.generate({ 'F1' => 'distance_km=1.2' })
     assert_equal 'localhost', http.calls.first.first
@@ -123,24 +122,38 @@ class ModelClientTest < Minitest::Test
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
-  def test_expired_deadline_interrupts_the_delayed_operation
-    http = HangingHTTP.new('{}')
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    started = clock
-    assert_raises(Model::Deadline) { client.generate({ 'F1' => 'x=1' }, deadline: started + 0.05) }
-    assert_operator clock - started, :<, 0.3
+  def fixture(name)
+    File.read(File.expand_path("../../fixtures/model/#{name}", __dir__))
+  end
+
+  def client(http)
+    Model::Client.new('http://localhost:11434', 'bielik', http: http)
+  end
+
+  def assert_request_stopped(http)
     sleep 0.5
     refute http.finished, 'the delayed request kept running after expiry'
   end
 
-  def test_retry_starts_with_reduced_remaining_budget
-    invalid = File.read(File.expand_path('../../fixtures/model/invalid-response.json', __dir__))
-    http = ScriptedHTTP.new([invalid, invalid], 0.1)
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    assert_raises(Model::Invalid) { client.generate({ 'F1' => 'x=1' }, deadline: clock + 5) }
+  def assert_reduced_timeouts(http)
     first, second = http.timeouts
     assert_operator first - second, :>=, 0.08
     assert_operator second, :<, 5
+  end
+
+  def test_expired_deadline_interrupts_the_delayed_operation
+    http = HangingHTTP.new('{}')
+    started = clock
+    assert_raises(Model::Deadline) { client(http).generate({ 'F1' => 'x=1' }, deadline: started + 0.05) }
+    assert_operator clock - started, :<, 0.3
+    assert_request_stopped(http)
+  end
+
+  def test_retry_starts_with_reduced_remaining_budget
+    invalid = fixture('invalid-response.json')
+    http = ScriptedHTTP.new([invalid, invalid], 0.1)
+    assert_raises(Model::Invalid) { client(http).generate({ 'F1' => 'x=1' }, deadline: clock + 5) }
+    assert_reduced_timeouts(http)
   end
 
   def test_retry_with_little_budget_left_is_cut_off_at_the_deadline

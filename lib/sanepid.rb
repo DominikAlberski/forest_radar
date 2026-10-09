@@ -2,6 +2,7 @@
 
 require 'uri'
 
+# Builds the local Sanepid information URL from coordinates.
 module Sanepid
   module_function
 

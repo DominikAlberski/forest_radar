@@ -1,58 +1,133 @@
 # frozen_string_literal: true
 
-module Assembler
-  class Facts
-    def build(search, walk)
-      areas = walk.fetch(:areas).map { |range| area(range, search.fetch(:stands)) }
-      { areas: areas, box_stand_count: search.fetch(:box_stand_count),
-        radius_stand_count: search.fetch(:radius_stand_count),
-        missing_identifier_count: search.fetch(:missing_identifier_count),
-        districts: search.fetch(:districts).map { |item| district(item, search.fetch(:stands)) },
-        trail_source: walk.fetch(:trail_source), attribution: walk.fetch(:attribution),
-        attribution_url: walk.fetch(:attribution_url) }
-    end
+require_relative 'fact_node'
 
-    def lines(facts)
-      flatten(facts).each_with_index.to_h { |(key, value), index| ["F#{index + 1}", "#{key}=#{value}"] }
+# Builds ordered card facts and model input lines.
+module Assembler
+  # Builds facts for one selected forest range.
+  AreaFacts = Struct.new(:range, :relevant) do
+    def to_h
+      identity.merge(trail_data).merge(stand_count: relevant.size).merge(summaries)
+              .merge(total_area: total_area, missing_attributes: missing)
     end
 
     private
 
-    def area(range, stands)
-      relevant = stands.select { |stand| stand['range_id'] == range['id'] && stand['in_radius'] == true }
-      { id: range['id'], name: range.dig('properties', 'forest_range_name') ||
-        range.dig('properties', 'name') || 'brak danych',
-        distance_km: range.fetch('distance_km').round(2), district_id: range['district_id'],
-        trails: range.fetch(:trails).map { |trail| trail.slice(:id, :name, :ref, :route) },
-        stand_count: relevant.size,
-        species: summary(relevant, 'species_cd'), sites: summary(relevant, 'site_type'),
-        ages: summary(relevant, 'spec_age'), years: summary(relevant, 'a_year'),
-        total_area: relevant.sum { |stand| stand['sub_area'].to_f }.round(2), missing_attributes: missing(relevant) }
+    def identity
+      { id: range['id'], name: name, distance_km: range.fetch('distance_km').round(2),
+        district_id: range['district_id'] }
     end
 
-    def summary(stands, key)
-      stands.map { |stand| stand[key] || 'brak danych' }.tally.sort_by { |value, count| [-count, value.to_s] }.to_h
+    def name
+      properties = range['properties'] || {}
+      properties.values_at('forest_range_name', 'name').find(&:itself) || 'brak danych'
     end
 
-    def missing(stands)
-      %w[species_cd site_type spec_age sub_area a_year].to_h do |key|
-        [key, stands.count { |stand| stand[key].nil? }]
-      end
+    def trail_data
+      { trails: range.fetch(:trails).map { |trail| trail.slice(:id, :name, :ref, :route) } }
     end
 
-    def district(item, stands)
-      { id: item['id'], name: item.dig('properties', 'inspectorate_name') ||
-        item.dig('properties', 'name') || 'brak danych',
-        address: item.dig('properties', 'adress_forest') || 'brak danych',
-        stand_count: stands.count { |stand| stand['district_id'] == item['id'] } }
+    def summaries
+      { species: summary('species_cd'), sites: summary('site_type'), ages: summary('spec_age'),
+        years: summary('a_year') }
     end
 
-    def flatten(value, path = '')
-      case value
-      when Hash then value.flat_map { |key, item| flatten(item, "#{path}.#{key}") }
-      when Array then value.each_with_index.flat_map { |item, index| flatten(item, "#{path}[#{index}]") }
-      else [[path.delete_prefix('.'), value.nil? ? 'brak danych' : value.to_s]]
-      end
+    def summary(key)
+      relevant.map { |stand| stand[key] || 'brak danych' }.tally.sort_by { |value, count| [-count, value.to_s] }.to_h
+    end
+
+    def total_area
+      relevant.sum { |stand| stand['sub_area'].to_f }.round(2)
+    end
+
+    def missing
+      %w[species_cd site_type spec_age sub_area a_year].to_h { |key| [key, missing_count(key)] }
+    end
+
+    def missing_count(key)
+      relevant.count { |stand| stand.values_at(key).compact.empty? }
+    end
+  end
+  private_constant :AreaFacts
+
+  # Builds facts for one forest district.
+  DistrictFacts = Struct.new(:item, :stands) do
+    def to_h
+      { id: item['id'], name: name, address: address, stand_count: stand_count }
+    end
+
+    private
+
+    def name
+      properties = item['properties'] || {}
+      properties.values_at('inspectorate_name', 'name').find(&:itself) || 'brak danych'
+    end
+
+    def address
+      item.dig('properties', 'adress_forest') || 'brak danych'
+    end
+
+    def stand_count
+      identifier = item['id']
+      stands.count { |stand| stand['district_id'] == identifier }
+    end
+  end
+  private_constant :DistrictFacts
+
+  # Collects source counts and selected range facts in response order.
+  FactBuild = Struct.new(:search, :walk) do
+    def to_h
+      { areas: areas }.merge(counts).merge(districts: districts).merge(trail_data)
+    end
+
+    private
+
+    def areas
+      walk.fetch(:areas).map { |range| AreaFacts.new(range, relevant(range)).to_h }
+    end
+
+    def relevant(range)
+      identifier = range['id']
+      search.fetch(:stands).select { |stand| stand.values_at('range_id', 'in_radius') == [identifier, true] }
+    end
+
+    def counts
+      { box_stand_count: count(:box_stand_count), radius_stand_count: count(:radius_stand_count),
+        missing_identifier_count: count(:missing_identifier_count) }
+    end
+
+    def count(key)
+      search.fetch(key)
+    end
+
+    def districts
+      search.fetch(:districts).map { |item| DistrictFacts.new(item, search.fetch(:stands)).to_h }
+    end
+
+    def trail(key)
+      walk.fetch(key)
+    end
+
+    def trail_data
+      { trail_source: trail(:trail_source), attribution: trail(:attribution),
+        attribution_url: trail(:attribution_url) }
+    end
+  end
+  private_constant :FactBuild
+
+  # Builds the card facts and numbered model input lines.
+  class Facts
+    def initialize(builder: FactBuild, node: FactNode)
+      @builder = builder
+      @node = node
+    end
+
+    def build(search, walk)
+      @builder.new(search, walk).to_h
+    end
+
+    def lines(facts)
+      @node.new(facts, '').entries.each_with_index.to_h { |(key, value), index| ["F#{index + 1}", "#{key}=#{value}"] }
     end
   end
 end

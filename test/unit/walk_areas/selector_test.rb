@@ -9,7 +9,7 @@ class WalkAreaSelectorTest < Minitest::Test
       @relations = relations
     end
 
-    def relations(bbox:, deadline:)
+    def relations(**)
       @relations
     end
   end
@@ -19,8 +19,8 @@ class WalkAreaSelectorTest < Minitest::Test
                                               [x, 0.01], [x, 0]]] }
   end
 
-  def range(id, x, distance)
-    { 'id' => id, 'geometry' => square(x), 'district_id' => 1, 'distance_km' => distance }
+  def range(identifier, x, distance)
+    { 'id' => identifier, 'geometry' => square(x), 'district_id' => 1, 'distance_km' => distance }
   end
 
   def relation(x)
@@ -30,13 +30,21 @@ class WalkAreaSelectorTest < Minitest::Test
   def select(ranges, relations:, districts: [])
     search = { ranges: ranges, districts: districts }
     WalkAreas::Selector.new(trails: Trails.new(relations))
-                       .select(search: search, lat: 0, lon: 0, radius_km: 20, session_id: 's')
+                       .select(search: search, area: WalkAreas::Area.new(lat: 0, lon: 0, radius_km: 20))
   end
 
   def test_crossing_trails_select_at_most_three_in_stable_distance_order
     ranges = [range(4, 0.04, 3), range(2, 0.02, 1), range(1, 0.01, 1), range(3, 0.03, 2)]
     result = select(ranges, relations: [0.01, 0.02, 0.03, 0.04].map { |x| relation(x) })
+    assert_selected_order(result)
+    assert_trail_metadata(result)
+  end
+
+  def assert_selected_order(result)
     assert_equal([1, 2, 3], result[:areas].map { |item| item['id'] })
+  end
+
+  def assert_trail_metadata(result)
     assert_equal 'OpenStreetMap', result[:trail_source]
     assert_equal OSM::Client::ATTRIBUTION, result[:attribution]
     assert(result[:areas].all? { |item| item[:trails].any? })
@@ -66,16 +74,36 @@ class WalkAreaSelectorTest < Minitest::Test
   end
 
   def test_recorded_relations_cross_both_recorded_ranges
+    result = recorded_result
+    assert_equal([5157, 5172], result[:areas].map { |item| item['id'] })
+    assert_recorded_trails(result)
+  end
+
+  def recorded_result
     root = File.expand_path('../../fixtures', __dir__)
+    relations = recorded_relations(root)
+    ranges = recorded_ranges(root)
+    search = { ranges: ranges, districts: [{ 'id' => 398 }] }
+    recorded_selection(search, relations)
+  end
+
+  def recorded_selection(search, relations)
+    WalkAreas::Selector.new(trails: Trails.new(relations))
+                       .select(search: search, area: WalkAreas::Area.new(lat: 52.3, lon: 20.7, radius_km: 20))
+  end
+
+  def recorded_relations(root)
+    OSM::Client.new(transport: FixtureTransport.new(File.read("#{root}/osm/range-sample.json")))
+               .relations(bbox: [20.6, 52.25, 20.8, 52.35])
+  end
+
+  def recorded_ranges(root)
     first = JSON.parse(File.read("#{root}/sources/range-sample.json")).fetch('features').first
     second = JSON.parse(File.read("#{root}/osm/bdl-range-box-page2.json")).fetch('features').first
-    relations = OSM::Client.new(transport: FixtureTransport.new(File.read("#{root}/osm/range-sample.json")))
-                           .relations(bbox: [20.6, 52.25, 20.8, 52.35])
-    ranges = [first, second].map { |item| item.merge('district_id' => 398, 'distance_km' => 1) }
-    search = { ranges: ranges, districts: [{ 'id' => 398 }] }
-    result = WalkAreas::Selector.new(trails: Trails.new(relations))
-                                .select(search: search, lat: 52.3, lon: 20.7, radius_km: 20, session_id: 's')
-    assert_equal([5157, 5172], result[:areas].map { |item| item['id'] })
+    [first, second].map { |item| item.merge('district_id' => 398, 'distance_km' => 1) }
+  end
+
+  def assert_recorded_trails(result)
     assert_includes result[:areas].first[:trails].map { |item| item[:id] }, 120_876
     assert_includes result[:areas].last[:trails].map { |item| item[:id] }, 120_876
   end
@@ -85,7 +113,7 @@ class WalkAreaSelectorTest < Minitest::Test
       @body = body
     end
 
-    def get(_path, params:, deadline:)
+    def get(_path, **)
       @body
     end
   end

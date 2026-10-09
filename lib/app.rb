@@ -13,6 +13,47 @@ require_relative 'model/client'
 require_relative 'card/builder'
 
 module ForestRadar
+  # Parses and checks the coordinates in one card request.
+  class CardInput
+    def initialize(input)
+      @input = input
+      @values = %w[lat lon radius_km].map { |key| coordinate(key) }
+    end
+
+    def values
+      raise ArgumentError, 'invalid coordinates' unless valid?
+
+      @values
+    end
+
+    private
+
+    def coordinate(key)
+      value = @input[key]
+      Float(value) if value.is_a?(Numeric) || value.is_a?(String)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def valid?
+      lat, lon, radius = @values
+      @values.all? { |value| value&.finite? } && lat.between?(-90, 90) &&
+        lon.between?(-180, 180) && radius.between?(1, 20)
+    end
+  end
+
+  # Formats one localized API error response.
+  class CardError
+    def initialize(key)
+      @key = key
+    end
+
+    def json
+      JSON.generate(error: @key, message: I18n.t("errors.#{@key}"))
+    end
+  end
+
+  # Serves the search page and generates trip cards from source data.
   class App < Sinatra::Base
     configure do
       I18n.load_path += Dir[File.expand_path('../config/locales/*.yml', __dir__)]
@@ -32,40 +73,31 @@ module ForestRadar
 
     post '/api/card' do
       content_type :json
-      input = parse_input
-      lat, lon, radius = %w[lat lon radius_km].map { |key| coordinate(input[key]) }
-      halt 422, error('invalid_input') unless valid?(lat, lon, radius)
+      lat, lon, radius = CardInput.new(parse_input).values
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 29
       session = session_id
-      search = settings.search_cache.fetch(session_id: session, lat: lat, lon: lon,
-                                           radius_km: radius, query: 'card') do
+      search = settings.search_cache.fetch([session, lat, lon, radius, 'card']) do
         settings.search_client.search(lat: lat, lon: lon, radius_km: radius)
       end
-      walk = settings.selector.select(search: search, lat: lat, lon: lon, radius_km: radius, session_id: session)
+      walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius))
       facts = Assembler::Facts.new.build(search, walk)
       lines = Assembler::Facts.new.lines(facts)
       advice = settings.model_client.generate(lines, deadline: deadline)
       card = Card::Builder.new.build(facts: facts, advice: advice, lat: lat, lon: lon)
       JSON.generate(facts: facts, card: card, sanepid_url: card[:sanepid_url])
     rescue TypeError, ArgumentError
-      halt 422, error('invalid_input')
+      halt 422, CardError.new('invalid_input').json
     rescue BDL::NoCoverage
-      halt 422, error('no_coverage')
+      halt 422, CardError.new('no_coverage').json
     rescue BDL::Incomplete
-      halt 502, error('source')
+      halt 502, CardError.new('source').json
     rescue Model::Deadline
-      halt 504, error('deadline')
+      halt 504, CardError.new('deadline').json
     rescue Model::Invalid, IOError, SystemCallError, Timeout::Error
-      halt 502, error('model')
+      halt 502, CardError.new('model').json
     end
 
     private
-
-    def coordinate(value)
-      Float(value) if value.is_a?(Numeric) || value.is_a?(String)
-    rescue ArgumentError, TypeError
-      nil
-    end
 
     def parse_input
       input = JSON.parse(request.body.read)
@@ -76,11 +108,6 @@ module ForestRadar
       raise ArgumentError, 'invalid JSON'
     end
 
-    def valid?(lat, lon, radius)
-      [lat, lon, radius].all? { |value| value&.finite? } && lat.between?(-90, 90) &&
-        lon.between?(-180, 180) && radius.between?(1, 20)
-    end
-
     def session_id
       value = request.cookies[Cache::SessionId::COOKIE]
       return value if Cache::SessionId.valid?(value)
@@ -88,10 +115,6 @@ module ForestRadar
       value = Cache::SessionId.generate
       response.set_cookie(Cache::SessionId::COOKIE, Cache::SessionId.cookie(value, secure: request.secure?))
       value
-    end
-
-    def error(key)
-      JSON.generate(error: key, message: I18n.t("errors.#{key}"))
     end
   end
 end
