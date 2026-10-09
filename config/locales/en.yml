@@ -1,0 +1,12 @@
+en:
+  card:
+    mushroom_warning: ""
+    access_warning: ""
+    sanepid_label: ""
+    sanepid_url_template: ""
+  errors:
+    invalid_input: ""
+    no_coverage: ""
+    source: ""
+    model: ""
+    deadline: ""
