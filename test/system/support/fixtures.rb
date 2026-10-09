@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Deterministic service fixtures for the browser checks.
 #
 # FIXTURE EVIDENCE IS LABELED. The recorded S2 Overpass responses and the recorded BDL responses
@@ -28,7 +30,8 @@ module SystemFixtures
 
   def self.search(count: 4, stands: nil)
     ranges = (1..count).map { |i| range(i, 0.01 * i, i.to_f, "SYNTHETIC las #{i}") }
-    { ranges: ranges, districts: [{ 'id' => 1, 'properties' => { 'name' => 'SYNTHETIC nadleśnictwo', 'adress_forest' => 'x' } }],
+    { ranges: ranges,
+      districts: [{ 'id' => 1, 'properties' => { 'name' => 'SYNTHETIC nadleśnictwo', 'adress_forest' => 'x' } }],
       stands: stands || ranges.map { |r| stand(r['id']) }, box_stand_count: count, radius_stand_count: count,
       missing_identifier_count: 0 }
   end
@@ -41,12 +44,15 @@ module SystemFixtures
     attr_reader :requests
 
     def initialize(data = nil, error: nil)
-      @data, @error, @requests = data, error, []
+      @data = data
+      @error = error
+      @requests = []
     end
 
     def search(**args)
       @requests << args
       raise @error if @error
+
       @data
     end
   end
@@ -76,11 +82,13 @@ module SystemFixtures
 
   class Model
     def initialize(text = 'Sprawdź szlak przed wyjściem.', error: nil)
-      @text, @error = text, error
+      @text = text
+      @error = error
     end
 
     def generate(*, **)
       raise @error if @error
+
       @text
     end
   end

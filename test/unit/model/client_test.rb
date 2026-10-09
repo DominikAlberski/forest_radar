@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'model/client'
 require 'tempfile'
@@ -9,7 +11,8 @@ class ModelClientTest < Minitest::Test
     attr_reader :calls
 
     def initialize(body)
-      @body, @calls = body, []
+      @body = body
+      @calls = []
     end
 
     def start(host, port, **options)
@@ -66,7 +69,7 @@ class ModelClientTest < Minitest::Test
     http = RecordedHTTP.new(fixture)
     client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
     assert_raises(Model::Invalid) { client.generate({ 'F1' => 'distance_km=1.2' }) }
-    assert_equal 2, http.calls.count { |item| item.first == '/api/chat' }
+    assert_equal(2, http.calls.count { |item| item.first == '/api/chat' })
   end
 
   def test_deadline_bounds_open_and_response_together
@@ -89,7 +92,9 @@ class ModelClientTest < Minitest::Test
 
     def initialize(bodies, delay)
       super(nil)
-      @bodies, @delay, @timeouts = bodies, delay, []
+      @bodies = bodies
+      @delay = delay
+      @timeouts = []
     end
 
     def start(host, port, **options)

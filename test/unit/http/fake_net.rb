@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/http'
 require 'http/transport'
 
@@ -34,7 +36,8 @@ module FakeNet
     attr_reader :script, :clock
 
     def initialize(script, step)
-      @script, @step = script, step
+      @script = script
+      @step = step
       @max_retries = 1 # Net::HTTP default
     end
 
@@ -43,6 +46,7 @@ module FakeNet
       step = @step
       script.clock&.advance([step[:read_seconds], read_timeout || Float::INFINITY].min) if step[:read_seconds]
       raise Net::ReadTimeout if step[:read_seconds] && read_timeout && step[:read_seconds] > read_timeout
+
       response = Net::HTTPOK.new('1.1', '200', '')
       body = step[:body]
       response.define_singleton_method(:read_body) { |&block| block.call(body) }
@@ -55,13 +59,17 @@ module FakeNet
 
     # A step is an Exception to raise, a String body, or a Hash with :body, :connect_seconds, :read_seconds.
     def initialize(*steps, clock: nil)
-      @steps, @clock, @calls, @max_retries_seen = steps, clock, 0, []
+      @steps = steps
+      @clock = clock
+      @calls = 0
+      @max_retries_seen = []
     end
 
     def start(_host, _port, **options)
       @calls += 1
       step = @steps.shift
       raise step if step.is_a?(Exception)
+
       step = { body: step } if step.is_a?(String)
       connection = Connection.new(self, step)
       options.each { |key, value| connection.public_send("#{key}=", value) if connection.respond_to?("#{key}=") }

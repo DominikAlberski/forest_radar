@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'sinatra/base'
 require 'json'
 require 'i18n'
@@ -68,6 +70,7 @@ module ForestRadar
     def parse_input
       input = JSON.parse(request.body.read)
       raise ArgumentError, 'invalid JSON object' unless input.is_a?(Hash)
+
       input
     rescue JSON::ParserError
       raise ArgumentError, 'invalid JSON'
@@ -81,6 +84,7 @@ module ForestRadar
     def session_id
       value = request.cookies[Cache::SessionId::COOKIE]
       return value if Cache::SessionId.valid?(value)
+
       value = Cache::SessionId.generate
       response.set_cookie(Cache::SessionId::COOKIE, Cache::SessionId.cookie(value, secure: request.secure?))
       value

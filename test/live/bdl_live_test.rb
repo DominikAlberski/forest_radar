@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../test_helper'
 require 'json'
 require 'bdl/client'
@@ -48,5 +50,4 @@ class BdlLiveTest < Minitest::Test
     assert_equal stands.count { |item| item['in_radius'] }, result.fetch(:radius_stand_count)
     assert_equal stands.count { |item| item['missing_identifier'] }, result.fetch(:missing_identifier_count)
   end
-
 end

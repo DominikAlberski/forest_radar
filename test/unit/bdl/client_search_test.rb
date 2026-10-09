@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'openssl'
 require 'bdl/client'
@@ -25,7 +27,10 @@ class ClientSearchTest < Minitest::Test
     attr_reader :paths
 
     def initialize(pages, clock: nil, seconds: 0)
-      @pages, @clock, @seconds, @paths = pages, clock, seconds, []
+      @pages = pages
+      @clock = clock
+      @seconds = seconds
+      @paths = []
     end
 
     def get(path, params:, deadline:)
@@ -33,6 +38,7 @@ class ClientSearchTest < Minitest::Test
       @clock&.advance(@seconds)
       body = @pages.fetch(path)
       raise body if body.is_a?(Exception)
+
       body.is_a?(String) ? body : body.to_json
     end
   end
@@ -49,8 +55,8 @@ class ClientSearchTest < Minitest::Test
       collection('RDLP_Warszawa_wydzielenia') => page([]) }
   end
 
-  def search(pages, **options)
-    BDL::Client.new(transport: Fake.new(pages), **options).search(lat: LAT, lon: LON, radius_km: 5)
+  def search(pages, **)
+    BDL::Client.new(transport: Fake.new(pages), **).search(lat: LAT, lon: LON, radius_km: 5)
   end
 
   # R2
@@ -152,13 +158,13 @@ class ClientSearchTest < Minitest::Test
     assert_equal 2, result[:box_stand_count]
     assert_equal 1, result[:radius_stand_count]
     assert_equal 0, result[:missing_identifier_count]
-    assert_equal [111, 222], result[:stands].map { |item| item['a_i_num'] }
-    assert_equal [true, false], result[:stands].map { |item| item['in_radius'] }
-    assert_equal [2, 2], result[:stands].map { |item| item['district_id'] }
-    assert_equal [3, 3], result[:stands].map { |item| item['range_id'] }
+    assert_equal([111, 222], result[:stands].map { |item| item['a_i_num'] })
+    assert_equal([true, false], result[:stands].map { |item| item['in_radius'] })
+    assert_equal([2, 2], result[:stands].map { |item| item['district_id'] })
+    assert_equal([3, 3], result[:stands].map { |item| item['range_id'] })
     assert_nil result[:stands].last['species_cd']
-    assert result[:stands].none? { |item| item.key?('geometry') }
-    assert_equal [3], result[:ranges].map { |item| item['id'] }
+    assert(result[:stands].none? { |item| item.key?('geometry') })
+    assert_equal([3], result[:ranges].map { |item| item['id'] })
     assert_equal 2, result[:ranges].first['district_id']
     assert_equal 0.0, result[:ranges].first['distance_km']
   end
@@ -179,7 +185,7 @@ class ClientSearchTest < Minitest::Test
       feature(id, { 'a_i_num' => id }, square(20.99, 51.99, 21.01, 52.01))
     end)
     pages[collection('RDLP_Lodz_wydzielenia')] = page([feature(999_999, { 'a_i_num' => 999_999 },
-                                                              square(20.99, 51.99, 21.01, 52.01))])
+                                                               square(20.99, 51.99, 21.01, 52.01))])
     assert_raises(BDL::Incomplete) { search(pages) }
   end
 end

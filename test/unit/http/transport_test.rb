@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'http/transport'
 
@@ -20,13 +22,15 @@ class TransportTest < Minitest::Test
     attr_reader :calls
 
     def initialize(*steps)
-      @steps, @calls = steps, 0
+      @steps = steps
+      @calls = 0
     end
 
     def start(*_args, **_options)
       @calls += 1
       step = @steps.shift
       raise step if step.is_a?(Exception)
+
       yield Http.new(step)
     end
   end
@@ -47,10 +51,10 @@ class TransportTest < Minitest::Test
     end
   end
 
-  def transport(retries: 2, **options)
+  def transport(retries: 2, **)
     @sleeper = Sleeper.new
     HTTP::Transport.new(base_url: 'https://example.test', user_agent: 'test', retries: retries,
-                        sleeper: @sleeper, **options)
+                        sleeper: @sleeper, **)
   end
 
   def run_script(script, &block)

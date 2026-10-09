@@ -1,0 +1,33 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 4.0
+
+Metrics/MethodLength:
+  # Match the Ruby method size limit.
+  Max: 5
+
+Metrics/ClassLength:
+  # Match the Ruby class size limit.
+  Max: 100
+
+Metrics/ParameterLists:
+  # Count keyword arguments toward the four-parameter limit.
+  Max: 4
+  CountKeywordArgs: true
+
+Layout/LineLength:
+  # Match the Ruby hard line length limit.
+  Max: 120
+
+Naming/MethodParameterName:
+  # Geometry formulas use conventional one-letter coordinates and coefficients.
+  AllowedNames: [x, y, a, b, t]
+
+Naming/RescuedExceptionsVariableName:
+  # Reek flags the default name e as an uncommunicative variable.
+  PreferredName: error
+
+Style/Documentation:
+  # Test classes do not need a separate purpose comment.
+  Exclude:
+    - 'test/**/*'

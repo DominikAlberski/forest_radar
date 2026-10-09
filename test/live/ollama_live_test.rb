@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../test_helper'
 require 'json'
 require 'net/http'
@@ -26,8 +28,8 @@ class OllamaLiveTest < Minitest::Test
       @posts = 0
     end
 
-    def start(*args, **options, &block)
-      Net::HTTP.start(*args, **options) do |connection|
+    def start(*, **, &block)
+      Net::HTTP.start(*, **) do |connection|
         counter = self
         connection.define_singleton_method(:post) do |*post_args|
           counter.instance_variable_set(:@posts, counter.posts + 1)
@@ -43,7 +45,9 @@ class OllamaLiveTest < Minitest::Test
     @hardware = ENV['OLLAMA_HOST_HARDWARE'].to_s
     flunk 'OLLAMA_URL is not set. Live M5 cannot pass without the supplied endpoint.' if @url.empty?
     flunk 'OLLAMA_HOST_HARDWARE is not set. Record the host hardware.' if @hardware.empty?
-    @model = ENV.fetch('OLLAMA_MODEL') { YAML.safe_load_file(File.expand_path('../../config/model.yml', __dir__)).fetch('model') }
+    @model = ENV.fetch('OLLAMA_MODEL') do
+      YAML.safe_load_file(File.expand_path('../../config/model.yml', __dir__)).fetch('model')
+    end
   end
 
   def clock
@@ -55,7 +59,8 @@ class OllamaLiveTest < Minitest::Test
     body = Net::HTTP.post(uri, JSON.generate(model: @model), 'Content-Type' => 'application/json')
     flunk "model #{@model} is unknown to #{@url}: HTTP #{body.code}" unless body.code == '200'
     details = JSON.parse(body.body)['details'] || {}
-    { model: @model, family: details['family'], parameters: details['parameter_size'], quantization: details['quantization_level'] }
+    { model: @model, family: details['family'], parameters: details['parameter_size'],
+      quantization: details['quantization_level'] }
   end
 
   def timed_call
@@ -89,15 +94,19 @@ class OllamaLiveTest < Minitest::Test
     assert_operator second_seconds, :<, 30
     assert rejection, 'validator accepted an unsafe answer'
     puts "EVIDENCE #{JSON.generate(model: model, hardware: @hardware,
-                                    first: { state: 'unknown', seconds: first_seconds, posts: first_posts, output: first },
-                                    second: { state: 'follows a first request', seconds: second_seconds,
-                                              posts: second_posts, output: second },
-                                    rejection: { unsafe_answer_rejected: rejection },
-                                    language_review: 'PENDING human review; POLISH regex is a smoke check')}"
+                                   first: { state: 'unknown', seconds: first_seconds, posts: first_posts,
+                                            output: first },
+                                   second: { state: 'follows a first request', seconds: second_seconds,
+                                             posts: second_posts, output: second },
+                                   rejection: { unsafe_answer_rejected: rejection },
+                                   language_review: 'PENDING human review; POLISH regex is a smoke check')}"
   end
 
   def test_m5_validator_rejects_unsafe_live_looking_answers
-    unsafe = "FAKTY\n#{LINES.map { |id, v| "#{id}: #{v}" }.join("\n")}\nWNIOSKI\nTen grzyb jest jadalny. Las jest otwarty."
+    facts = LINES.map do |id, v|
+      "#{id}: #{v}"
+    end.join("\n")
+    unsafe = "FAKTY\n#{facts}\nWNIOSKI\nTen grzyb jest jadalny. Las jest otwarty."
     assert_raises(Model::Invalid) { Model::Validator.new.validate(unsafe, LINES) }
   end
 end

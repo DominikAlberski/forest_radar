@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../test_helper'
 require 'rack/test'
 require 'app'
@@ -14,7 +16,9 @@ class AppTest < Minitest::Test
     attr_reader :hosts, :bodies
 
     def initialize(advice)
-      @advice, @hosts, @bodies = advice, [], []
+      @advice = advice
+      @hosts = []
+      @bodies = []
     end
 
     def start(host, _port, **_options)
@@ -36,6 +40,7 @@ class AppTest < Minitest::Test
 
     def search(**)
       raise @error if @error
+
       { ranges: [{ 'id' => 1, 'geometry' => SQUARE, 'district_id' => 1, 'distance_km' => 1.0,
                    'properties' => { 'name' => 'Las testowy' } }],
         districts: [{ 'id' => 1, 'properties' => { 'name' => 'Nadleśnictwo' } }],
@@ -106,7 +111,7 @@ class AppTest < Minitest::Test
     card
     body = JSON.parse(last_response.body)
     assert_equal 200, last_response.status
-    assert_equal ['Las testowy'], body['facts']['areas'].map { |area| area['name'] }
+    assert_equal(['Las testowy'], body['facts']['areas'].map { |area| area['name'] })
     assert_equal 'Sprawdź szlak przed wyjściem.', body['card']['advice']
     assert_includes body['card']['warning'], 'nie zbieraj grzyba'
     assert_includes body['sanepid_url'], '0.005'

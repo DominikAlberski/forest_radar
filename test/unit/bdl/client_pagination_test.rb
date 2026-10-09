@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'bdl/client'
 
@@ -8,7 +10,8 @@ class ClientPaginationTest < Minitest::Test
     attr_reader :calls
 
     def initialize(*bodies)
-      @bodies, @calls = bodies, []
+      @bodies = bodies
+      @calls = []
     end
 
     def get(path, params:, deadline:)
@@ -21,14 +24,14 @@ class ClientPaginationTest < Minitest::Test
     File.read(File.join(FIXTURES, name))
   end
 
-  def read(*bodies, **options)
+  def read(*bodies, **)
     transport = Replay.new(*bodies)
-    [BDL::Client.new(transport: transport).features('rdlp', bbox: [0, 0, 1, 1], **options), transport]
+    [BDL::Client.new(transport: transport).features('rdlp', bbox: [0, 0, 1, 1], **), transport]
   end
 
   def test_follows_next_link_and_keeps_order
     items, transport = read(fixture('rdlp-page1.json'), fixture('rdlp-page2.json'))
-    assert_equal [1, 2], items.map { |item| item['id'] }
+    assert_equal([1, 2], items.map { |item| item['id'] })
     assert_equal '/collections/rdlp/items', transport.calls.last.first
     assert_equal '1', transport.calls.last.last['offset']
   end

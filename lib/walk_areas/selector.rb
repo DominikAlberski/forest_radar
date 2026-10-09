@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../geo/geometry'
 require_relative '../osm/client'
 
@@ -10,9 +12,11 @@ module WalkAreas
     def select(search:, lat:, lon:, radius_km:, session_id:, deadline: nil)
       box = Geo::Geometry.bbox(lat, lon, radius_km)
       relations = @trails.relations(bbox: box, deadline: deadline)
-      eligible, excluded = [], []
+      eligible = []
+      excluded = []
       search.fetch(:ranges).each do |range|
         next if range.fetch('distance_km') > radius_km
+
         trails = relations&.select { |relation| crosses?(relation, range.fetch('geometry')) }
         reason = exclusion(trails)
         (reason ? excluded : eligible) << range.merge(trails: trails || [], exclusion_reason: reason)
@@ -26,7 +30,8 @@ module WalkAreas
 
     def exclusion(trails)
       return :trail_unavailable unless trails
-      return :no_mapped_trail if trails.empty?
+
+      :no_mapped_trail if trails.empty?
     end
 
     def crosses?(relation, polygon)
@@ -38,6 +43,7 @@ module WalkAreas
         way.each_cons(2).any? do |a, b|
           next false if [a[0], b[0]].max < west || [a[0], b[0]].min > east ||
                         [a[1], b[1]].max < south || [a[1], b[1]].min > north
+
           Geo::Geometry.contains?(polygon, a) || Geo::Geometry.contains?(polygon, b) ||
             rings.any? { |ring| ring.each_cons(2).any? { |c, d| Geo::Geometry.crossing?(a, b, c, d) } }
         end

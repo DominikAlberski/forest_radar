@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 require 'securerandom'
 
 module Cache
   module SessionId
     COOKIE = 'forest_radar_session'
+
     module_function
 
     def generate

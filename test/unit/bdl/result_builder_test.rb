@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'bdl/client'
 
@@ -57,7 +59,7 @@ class ResultBuilderTest < Minitest::Test
     result = build([stand('species_cd' => 'SO'), stand('species_cd' => 'BK')])
     assert_equal 2, result[:stands].length
     assert_equal 2, result[:missing_identifier_count]
-    assert result[:stands].all? { |item| item['missing_identifier'] }
+    assert(result[:stands].all? { |item| item['missing_identifier'] })
   end
 
   def test_null_attributes_stay_nil

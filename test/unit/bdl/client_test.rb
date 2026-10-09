@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'bdl/client'
 
@@ -6,7 +8,8 @@ class ClientTest < Minitest::Test
     attr_reader :paths
 
     def initialize(pages)
-      @pages, @paths = pages, []
+      @pages = pages
+      @paths = []
     end
 
     def get(path, params:, deadline:)
@@ -29,7 +32,7 @@ class ClientTest < Minitest::Test
     pages = { path => [page([feature(1)], matched: 2, next_url: "https://ogcapi.bdl.lasy.gov.pl#{path}?offset=1"),
                        page([feature(2)], matched: 2)] }
     client = BDL::Client.new(transport: FakeTransport.new(pages))
-    assert_equal [1, 2], client.features('rdlp', bbox: [0, 0, 1, 1]).map { |item| item['id'] }
+    assert_equal([1, 2], client.features('rdlp', bbox: [0, 0, 1, 1]).map { |item| item['id'] })
   end
 
   def test_rejects_incomplete_count

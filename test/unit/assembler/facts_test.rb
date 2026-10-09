@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'assembler/facts'
 require 'json'
@@ -14,9 +16,9 @@ class FactsTest < Minitest::Test
     assert_equal({ 'SO' => 1 }, facts[:areas].first[:species])
     assert_equal({ 2024 => 1 }, facts[:areas].first[:years])
     assert_equal 3, facts[:box_stand_count]
-    assert Assembler::Facts.new.lines(facts).values.any? { |value| value.include?('distance_km=1.2') }
+    assert(Assembler::Facts.new.lines(facts).values.any? { |value| value.include?('distance_km=1.2') })
     refute facts[:areas].first.key?(:ban)
-    refute Assembler::Facts.new.lines(facts).values.any? { |value| value.match?(/\bban=/) }
+    refute(Assembler::Facts.new.lines(facts).values.any? { |value| value.match?(/\bban=/) })
   end
 
   def test_uses_live_range_and_district_names

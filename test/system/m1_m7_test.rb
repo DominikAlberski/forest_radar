@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'minitest/autorun'
 require 'puma'
 require 'tmpdir'
@@ -94,7 +96,7 @@ class M1M7Test < Minitest::Test
     end
     submit(radius: 20)
     @page.wait_for("!document.getElementById('result').hidden")
-    assert_equal [20], @search.requests.map { |r| r[:radius_km] }
+    assert_equal([20], @search.requests.map { |r| r[:radius_km] })
   end
 
   def test_m1_geolocation_fills_the_fields_after_a_click
@@ -160,17 +162,21 @@ class M1M7Test < Minitest::Test
 
   def assert_openstreetmap_attribution
     assert_includes card_text, 'Źródło szlaków: OpenStreetMap'
-    link = @page.eval("(() => { const a = [...document.querySelectorAll('#card-content a')].find(a => a.href.includes('openstreetmap')); return a && [a.href, a.textContent]; })()")
+    link = @page.eval("(() => { const a = [...document.querySelectorAll('#card-content a')].find(a => " \
+                      "a.href.includes('openstreetmap')); return a && [a.href, a.textContent]; })()")
     assert_equal ['https://www.openstreetmap.org/copyright', OSM::Client::ATTRIBUTION], link
   end
 
   def test_external_text_renders_as_text
     markup = '<img src=x onerror="window.pwned=1"><b>x</b>'
-    walk = F::Walk.new([walk_area(1, name: markup, trails: [{ id: 1, name: '<script>window.pwned=2</script>' }])])
+    walk = F::Walk.new([walk_area(1, name: markup,
+                                     trails: [{ id: 1, name: '<script>window.pwned=2</script>' }])])
     use(walk, model: F::Model.new(markup))
     render_card
     assert_includes card_text, markup
-    assert_equal 0, @page.eval("document.querySelectorAll('#card-content img, #card-content script, #card-content b').length")
+    assert_equal 0,
+                 @page.eval("document.querySelectorAll('#card-content img, " \
+                            "#card-content script, #card-content b').length")
     assert_nil @page.eval('window.pwned')
     assert_includes card_text, '<script>window.pwned=2</script>'
   end
@@ -182,15 +188,18 @@ class M1M7Test < Minitest::Test
     assert_includes card_text, 'nie zbieraj grzyba'
     assert_includes card_text, 'Przed spacerem sprawdź aktualne zasady wstępu do lasu.'
     assert_includes card_text, 'Wskazówki modelu'
-    link = @page.eval("(() => { const a = document.querySelector('#card-content a[target=_blank]'); return [a.href, a.rel]; })()")
-    assert_match %r{\Ahttps://www\.google\.com/maps/search/stacja\+sanitarno-epidemiologiczna/@0\.005000,0\.005000,11z}, link[0].sub('%2C', ',')
+    link = @page.eval("(() => { const a = document.querySelector('#card-content a[target=_blank]'); " \
+                      'return [a.href, a.rel]; })()')
+    assert_match %r{\Ahttps://www\.google\.com/maps/search/stacja\+sanitarno-epidemiologiczna/@0\.005000,0\.005000,11z},
+                 link[0].sub('%2C', ',')
     assert_includes link[1], 'noopener'
   end
 
   def test_error_responses_show_polish_messages_and_no_card
     {
       'Brak danych leśnych dla tej lokalizacji.' => { search: F::Search.new(nil, error: BDL::NoCoverage.new('x')) },
-      'Nie można pobrać kompletnych danych źródłowych.' => { search: F::Search.new(nil, error: BDL::Incomplete.new('x')) },
+      'Nie można pobrać kompletnych danych źródłowych.' => { search: F::Search.new(nil,
+                                                                                   error: BDL::Incomplete.new('x')) },
       'Nie można przygotować karty. Spróbuj ponownie.' => { model: F::Model.new(error: ::Model::Invalid.new('x')) },
       'Model nie odpowiedział w wyznaczonym czasie.' => { model: F::Model.new(error: ::Model::Deadline.new('x')) }
     }.each do |message, options|
@@ -327,7 +336,8 @@ class M1M7Test < Minitest::Test
   def maximal_search
     stands = (1..3).flat_map do |id|
       (1..60).map do |n|
-        F.stand(id, 'spec_age' => n, 'a_year' => 1990 + (n % 35), 'species_cd' => "GAT#{n % 25}", 'site_type' => "SIEDLISKO#{n % 20}",
+        F.stand(id, 'spec_age' => n, 'a_year' => 1990 + (n % 35),
+                    'species_cd' => "GAT#{n % 25}", 'site_type' => "SIEDLISKO#{n % 20}",
                     'sub_area' => nil.then { n.odd? ? 1.5 : nil })
       end
     end
@@ -335,7 +345,9 @@ class M1M7Test < Minitest::Test
   end
 
   def maximal_area(id)
-    trails = (1..12).map { |n| { id: n, name: "SYNTHETIC bardzo długa nazwa szlaku turystycznego numer #{n} #{'x' * 40}" } }
+    trails = (1..12).map do |n|
+      { id: n, name: "SYNTHETIC bardzo długa nazwa szlaku turystycznego numer #{n} #{'x' * 40}" }
+    end
     walk_area(id, name: "SYNTHETIC las #{id} #{'długa nazwa ' * 6}", trails: trails)
   end
 end

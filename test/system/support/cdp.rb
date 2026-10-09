@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'json'
 require 'tmpdir'
 require 'timeout'
@@ -15,12 +17,16 @@ module Cdp
   def self.chrome_path
     path = ENV.fetch('CHROME_PATH', DEFAULT_CHROME)
     raise Error, "Chrome is missing at #{path}. Set CHROME_PATH." unless File.executable?(path)
+
     path
   end
 
   def self.which(name)
     return name if name.include?('/') && File.executable?(name)
-    ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).map { |dir| File.join(dir, name) }.find { |p| File.executable?(p) } ||
+
+    ENV.fetch('PATH', '').split(File::PATH_SEPARATOR).map do |dir|
+      File.join(dir, name)
+    end.find { |p| File.executable?(p) } ||
       raise(Error, "#{name} is missing. Install poppler or set PDFINFO_PATH / PDFTOTEXT_PATH.")
   end
 
@@ -29,8 +35,11 @@ module Cdp
 
     def initialize
       @profile = Dir.mktmpdir('forest-radar-chrome')
-      @events, @replies, @next_id = [], {}, 0
-      @lock, @cond = Mutex.new, ConditionVariable.new
+      @events = []
+      @replies = {}
+      @next_id = 0
+      @lock = Mutex.new
+      @cond = ConditionVariable.new
       start_process
     end
 
@@ -43,7 +52,7 @@ module Cdp
       args = ["--user-data-dir=#{@profile}", '--headless=new', '--remote-debugging-pipe', '--no-first-run',
               '--no-default-browser-check', '--disable-gpu', '--disable-extensions', 'about:blank']
       @pid = Process.spawn(Cdp.chrome_path, *args, 3 => to_chrome_r, 4 => from_chrome_w,
-                           in: File::NULL, out: File::NULL, err: File::NULL)
+                                                   in: File::NULL, out: File::NULL, err: File::NULL)
       to_chrome_r.close
       from_chrome_w.close
       @reader = Thread.new { read_loop }
@@ -76,6 +85,7 @@ module Cdp
       @to_chrome.write("#{JSON.generate(message)}\0")
       reply = wait_reply(id, timeout, method)
       raise Error, "#{method}: #{reply['error']['message']}" if reply['error']
+
       reply['result']
     end
 
@@ -85,6 +95,7 @@ module Cdp
         until @replies.key?(id)
           left = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
           raise Error, "#{method} timed out" if left <= 0
+
           @cond.wait(@lock, left)
         end
         @replies.delete(id)
@@ -92,13 +103,25 @@ module Cdp
     end
 
     def events_for(session, *methods)
-      @lock.synchronize { @events.select { |e| e['sessionId'] == session && (methods.empty? || methods.include?(e['method'])) } }
+      @lock.synchronize do
+        @events.select do |e|
+          e['sessionId'] == session && (methods.empty? || methods.include?(e['method']))
+        end
+      end
     end
 
     def close
       @to_chrome.close unless @to_chrome.closed?
-      Process.kill('TERM', @pid) rescue nil
-      Process.wait(@pid) rescue nil
+      begin
+        Process.kill('TERM', @pid)
+      rescue StandardError
+        nil
+      end
+      begin
+        Process.wait(@pid)
+      rescue StandardError
+        nil
+      end
       @reader.kill
       FileUtils.rm_rf(@profile)
     end
@@ -130,6 +153,7 @@ module Cdp
     def eval(expression)
       result = cmd('Runtime.evaluate', expression: expression, returnByValue: true, awaitPromise: true)
       raise Error, "JavaScript failed: #{result['exceptionDetails'].inspect}" if result['exceptionDetails']
+
       result.dig('result', 'value')
     end
 
@@ -141,10 +165,15 @@ module Cdp
     end
 
     def js_errors
-      thrown = @browser.events_for(@session, 'Runtime.exceptionThrown').map { |e| e.dig('params', 'exceptionDetails', 'text').to_s +
-                                                                          e.dig('params', 'exceptionDetails', 'exception', 'description').to_s }
+      thrown = @browser.events_for(@session,
+                                   'Runtime.exceptionThrown').map do |e|
+        e.dig('params', 'exceptionDetails', 'text').to_s +
+          e.dig('params', 'exceptionDetails',
+                'exception', 'description').to_s
+      end
       logged = @browser.events_for(@session, 'Log.entryAdded').map { |e| e['params']['entry'] }
-                       .select { |entry| entry['level'] == 'error' && entry['source'] != 'network' }.map { |entry| entry['text'] }
+                       .select { |entry| entry['level'] == 'error' && entry['source'] != 'network' }
+                       .map { |entry| entry['text'] }
       thrown + logged
     end
 
@@ -154,7 +183,9 @@ module Cdp
     end
 
     def close
-      @browser.call('Target.closeTarget', targetId: @target, timeout: 5) rescue nil
+      @browser.call('Target.closeTarget', targetId: @target, timeout: 5)
+    rescue StandardError
+      nil
     end
   end
 end

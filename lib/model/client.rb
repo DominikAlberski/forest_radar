@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'json'
 require 'net/http'
 require 'timeout'
@@ -19,16 +21,20 @@ module Model
     def initialize(url, model, http: Net::HTTP)
       @uri = URI(url)
       raise ArgumentError, 'invalid Ollama URL' unless %w[http https].include?(@uri.scheme) && @uri.host
-      @model, @http = model, http
+
+      @model = model
+      @http = http
     end
 
     def generate(lines, deadline: Process.clock_gettime(Process::CLOCK_MONOTONIC) + 29)
       2.times do |attempt|
         remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
         raise Deadline, 'model deadline' if remaining <= 0
+
         begin
           advice = Timeout.timeout(remaining) { Validator.new.validate(request(lines, remaining), lines) }
           raise Deadline, 'model deadline' if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
           return advice
         rescue Timeout::Error
           expired = Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
@@ -48,15 +54,18 @@ module Model
         { role: 'user', content: "FAKTY\n#{lines.map { |id, value| "#{id}: #{value}" }.join("\n")}" }
       ] }
       response = @http.start(uri.host, uri.port, use_ssl: uri.scheme == 'https', open_timeout: remaining,
-                             read_timeout: remaining) { |connection| connection.post(uri.request_uri, JSON.generate(body),
-                                                                                       'Content-Type' => 'application/json') }
+                                                 read_timeout: remaining) do |connection|
+        connection.post(uri.request_uri, JSON.generate(body),
+                        'Content-Type' => 'application/json')
+      end
       raise Invalid, 'model HTTP error' unless response.code == '200'
+
       JSON.parse(response.body).fetch('message').fetch('content')
     end
   end
 
   class Stub
-    def generate(lines, deadline: nil)
+    def generate(_lines, deadline: nil)
       'Sprawdź warunki w terenie.'
     end
   end

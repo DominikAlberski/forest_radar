@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 module Geo
   module Geometry
     EARTH_KM = 6371.0088
+
     module_function
 
     def bbox(lat, lon, radius_km)
@@ -20,6 +23,7 @@ module Geo
       return [] unless geometry
       raise ArgumentError, 'invalid geometry' unless geometry.is_a?(Hash)
       raise ArgumentError, 'invalid coordinates' unless geometry['coordinates'].is_a?(Array)
+
       case geometry['type']
       when 'Polygon' then [geometry.fetch('coordinates')]
       when 'MultiPolygon' then geometry.fetch('coordinates')
@@ -29,14 +33,15 @@ module Geo
 
     def inside_ring?(point, ring)
       return true if ring.each_cons(2).any? { |a, b| on_segment?(point, a, b) }
+
       ring.each_cons(2).count do |a, b|
         (a[1] > point[1]) != (b[1] > point[1]) &&
-          point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]
+          point[0] < ((b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1])) + a[0]
       end.odd?
     end
 
     def on_segment?(point, a, b)
-      cross = (point[0] - a[0]) * (b[1] - a[1]) - (point[1] - a[1]) * (b[0] - a[0])
+      cross = ((point[0] - a[0]) * (b[1] - a[1])) - ((point[1] - a[1]) * (b[0] - a[0]))
       cross.abs < 1e-10 && point[0].between?(*[a[0], b[0]].minmax) &&
         point[1].between?(*[a[1], b[1]].minmax)
     end
@@ -49,15 +54,17 @@ module Geo
     end
 
     def segment_distance(point, a, b)
-      dx, dy = b[0] - a[0], b[1] - a[1]
-      t = dx.zero? && dy.zero? ? 0 : ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / (dx * dx + dy * dy)
+      dx = b[0] - a[0]
+      dy = b[1] - a[1]
+      t = dx.zero? && dy.zero? ? 0 : (((point[0] - a[0]) * dx) + ((point[1] - a[1]) * dy)) / ((dx * dx) + (dy * dy))
       t = [[t, 0].max, 1].min
-      Math.hypot(point[0] - a[0] - t * dx, point[1] - a[1] - t * dy)
+      Math.hypot(point[0] - a[0] - (t * dx), point[1] - a[1] - (t * dy))
     end
 
     def distance(geometry, lat, lon)
       point = [lon, lat]
       return 0.0 if contains?(geometry, point)
+
       polygons(geometry).flat_map do |rings|
         rings.flat_map do |ring|
           ring.each_cons(2).map { |a, b| segment_distance([0, 0], project(a, [lat, lon]), project(b, [lat, lon])) }
@@ -84,13 +91,15 @@ module Geo
     end
 
     def crossing?(a, b, c, d)
-      return on_segment?(c, a, b) || on_segment?(d, a, b) ||
-             on_segment?(a, c, d) || on_segment?(b, c, d) if side(a, b, c).zero? && side(a, b, d).zero?
+      if side(a, b, c).zero? && side(a, b, d).zero?
+        return on_segment?(c, a, b) || on_segment?(d, a, b) ||
+               on_segment?(a, c, d) || on_segment?(b, c, d)
+      end
       side(a, b, c) * side(a, b, d) <= 0 && side(c, d, a) * side(c, d, b) <= 0
     end
 
     def side(a, b, p)
-      (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+      ((b[0] - a[0]) * (p[1] - a[1])) - ((b[1] - a[1]) * (p[0] - a[0]))
     end
   end
 end

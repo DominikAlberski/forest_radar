@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require_relative 'fake_net'
 
@@ -7,13 +9,13 @@ class TransportHardeningTest < Minitest::Test
     @clock = FakeNet::Clock.new
   end
 
-  def transport(**options)
+  def transport(**)
     HTTP::Transport.new(base_url: 'https://example.test', user_agent: 'test', retries: 2,
-                        sleeper: @clock, timeout: 10, **options)
+                        sleeper: @clock, timeout: 10, **)
   end
 
-  def run_with(script, &block)
-    FakeNet.with(script, @clock, &block)
+  def run_with(script, &)
+    FakeNet.with(script, @clock, &)
   end
 
   # R3
@@ -26,7 +28,10 @@ class TransportHardeningTest < Minitest::Test
   # R3
   def test_retries_socket_error_with_half_and_one_second_waits
     waits = []
-    @clock.define_singleton_method(:sleep) { |seconds| waits << seconds; advance(seconds) }
+    @clock.define_singleton_method(:sleep) do |seconds|
+      waits << seconds
+      advance(seconds)
+    end
     script = FakeNet::Script.new(SocketError.new('dns'), SocketError.new('dns'), '{}', clock: @clock)
     assert_equal '{}', run_with(script) { transport.get('/x') }
     assert_equal 3, script.calls

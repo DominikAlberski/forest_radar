@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../test_helper'
 require 'yaml'
 require 'model/validator'
@@ -15,6 +17,7 @@ class LocalesTest < Minitest::Test
 
   def leaves(value, path = [])
     return value.flat_map { |key, item| leaves(item, path + [key]) } if value.is_a?(Hash)
+
     [[path.join('.'), value]]
   end
 

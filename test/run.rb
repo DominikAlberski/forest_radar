@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rbconfig'
 
 mode = ARGV.fetch(0) { abort 'choose --unit, --system, --live, or --all' }

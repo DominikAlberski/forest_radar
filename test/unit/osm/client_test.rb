@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../../test_helper'
 require 'osm/client'
 require 'cache/session_cache'
@@ -10,7 +12,8 @@ class OSMClientTest < Minitest::Test
     attr_reader :calls, :params, :deadline
 
     def initialize(body)
-      @body, @calls = body, 0
+      @body = body
+      @calls = 0
     end
 
     def get(_path, params:, deadline:)
@@ -18,13 +21,14 @@ class OSMClientTest < Minitest::Test
       @params = params
       @deadline = deadline
       raise @body if @body.is_a?(Exception)
+
       @body
     end
   end
 
   class StatusScript < FakeNet::Script
-    def start(*args, **options)
-      super(*args, **options) do |connection|
+    def start(*, **)
+      super do |connection|
         connection.define_singleton_method(:request) do |_request, &block|
           block.call(Net::HTTPTooManyRequests.new('1.1', '429', 'busy'))
         end
@@ -42,7 +46,7 @@ class OSMClientTest < Minitest::Test
     client = OSM::Client.new(transport: fake, cache: Cache::SessionCache.new)
     first = client.relations(bbox: BOX)
     assert_equal 15, first.length
-    assert_includes first.map { |item| item[:id] }, 120876
+    assert_includes first.map { |item| item[:id] }, 120_876
     assert_equal first, client.relations(bbox: BOX)
     assert_equal 1, fake.calls
     assert_includes fake.params[:data], '52.25,20.6,52.35,20.8'
