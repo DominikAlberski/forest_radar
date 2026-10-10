@@ -167,18 +167,12 @@ class AppLogTest < Minitest::Test
   end
 
   def configure_logger
-    @clock = AppLogSupport::Clock.new
-    clock = @clock
+    clock = @clock = AppLogSupport::Clock.new
     app.set :clock, -> { clock.call }
-    configure_output
-  end
-
-  def configure_output
     @output = StringIO.new
     @log = build_log
     app.set :source_log, @log
   end
-  private :configure_output
 
   def configure_app_services
     app.set :search_cache, Cache::SearchCache.new
