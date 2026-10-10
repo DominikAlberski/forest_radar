@@ -47,3 +47,36 @@ Write the card in plain Polish. Do not use forestry jargon without a gloss. A us
 - Repository and package name: `forest_radar`.
 - The Polish card title, in `pl.yml`: `Leśny Radar`.
 - The English card title, in `en.yml`: empty, like every other English string.
+
+## Stage
+
+The local MVP runs (M1 to M7). The field test (M8) and publication are not done.
+
+Read these files next:
+
+1. [PLAN.md](../PLAN.md) — what to build, the architecture, and the open questions.
+2. [data-sources.md](data-sources.md) — the forest data. Every endpoint is verified.
+3. [model-and-prompts.md](model-and-prompts.md) — the model choice, the prompts, and the safety rules.
+4. [mvp.md](plans/mvp.md) — the acceptance criteria.
+5. [roadmap.md](roadmap.md) — the plan to the submission deadline.
+
+## The two data questions
+
+The project produces two kinds of output. Keep them apart.
+
+- **Hard facts.** These come from the Bank Danych o Lasach. Example: the stand at this point holds pine, 70 years old, on a fresh mixed conifer site.
+- **Soft advice.** These come from the model. Example: look for boletus and chanterelle here in October.
+
+Mark the second kind as a suggestion in the interface. See the safety rules in [model-and-prompts.md](model-and-prompts.md).
+
+## Why this project
+
+Hacktoberfest 2026 Week 1 theme: Touch Grass. Build something that gets people off the screen and into the world.
+
+This project uses three open pieces:
+
+1. Open forest data from Lasy Państwowe (the Polish State Forests).
+2. An open-weight Polish model (Bielik).
+3. Open local inference (Ollama).
+
+No cloud service is required. See [Privacy](../README.md) for where the location goes.
