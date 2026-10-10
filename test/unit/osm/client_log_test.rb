@@ -2,9 +2,16 @@
 
 require_relative '../../test_helper'
 require 'osm/client'
+require 'source_log'
 require 'cache/session_cache'
 
 module OSMClientLogSupport
+  class BrokenIO
+    def puts(*)
+      raise Errno::EPIPE
+    end
+  end
+
   class Clock
     attr_reader :now
 
@@ -66,6 +73,11 @@ class OSMClientLogTest < Minitest::Test
     relations = client(HTTP::ResponseError.new('overpass failed')).relations(bbox: BOX)
     assert_nil relations
     assert_equal [[:osm, 'HTTP::ResponseError', 'overpass failed', 125]], @log.events
+  end
+
+  def test_logger_write_failure_returns_nil
+    @log = SourceLog.new(io: OSMClientLogSupport::BrokenIO.new)
+    assert_nil client(HTTP::ResponseError.new('overpass failed')).relations(bbox: BOX)
   end
 
   def test_good_response_returns_relations_without_a_log_record

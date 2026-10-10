@@ -12,6 +12,12 @@ module AppLogConfigured
 end
 
 module AppLogSupport
+  class BrokenIO
+    def puts(*)
+      raise Errno::EPIPE
+    end
+  end
+
   class Clock
     attr_reader :now
 
@@ -78,6 +84,14 @@ module AppLogSupport
 end
 
 module AppLogFailureTests
+  def test_logger_write_failure_keeps_the_bdl_response
+    app.set :source_log, SourceLog.new(io: AppLogSupport::BrokenIO.new)
+    app.set :search_client, failing_search(BDL::Incomplete.new('count changed'))
+    card
+    assert_equal 502, last_response.status
+    assert_equal 'source', JSON.parse(last_response.body).fetch('error')
+  end
+
   def test_incomplete_search_returns_502_and_logs_one_bdl_record
     app.set :search_client, failing_search(BDL::Incomplete.new('count changed'))
     card

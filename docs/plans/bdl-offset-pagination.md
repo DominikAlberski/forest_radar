@@ -51,41 +51,77 @@ D3. Start the 29 s card deadline after the BDL search returns, in lib/app.rb.
 - Seam: App gets the setting clock (a lambda that returns the monotonic time). lib/app.rb reads the time only through settings.clock.
 - New upper bound of one card request: about 60 s BDL plus 29 s card, so about 89 s. ADR 0009 records this bound.
 
-D4. Log the BDL::Incomplete message once per failed request.
-- Sink: env['rack.errors']. Puma writes it to stderr. The line format: 'BDL incomplete: <message>'.
-- Tests read the rack.errors stream of the test request (Rack::Test last_request.env['rack.errors']).
-- The response body stays the same: error 'source' and the errors.source text. No new locale key.
+D4. Log each failed source request as one line on stderr (scope change from the PM, approved by the user).
+- New module lib/source_log.rb. One SourceLog object writes one line per failure to an IO. The default IO is $stderr.
+- App gets the setting source_log. Tests replace it with a SourceLog on a StringIO.
+- Sources: bdl (the search call), osm (the trail request), model (the generate call). Each source logs once per failed call.
+- BDL and model: lib/app.rb measures the elapsed time around the call through settings.clock. The rescue logs, then halts as today.
+- OSM: OSM::Client#relations swallows errors and returns nil. So OSM::Client gets a log: keyword (default: no log) and a clock: keyword (default: monotonic time). Its rescue logs, then returns nil as today.
+- Wiring: App configure builds one SourceLog. It sets source_log to that object and builds OSM::Client.new(log: source_log) with the same object.
+- Model: every model rescue class in lib/app.rb logs one model line: Model::Deadline, Model::Invalid, IOError, SystemCallError, Timeout::Error.
+- BDL: BDL::Incomplete logs one bdl line. BDL::NoCoverage is an expected outcome and writes no line.
+  Known gap: a TypeError or ArgumentError from the search goes to the 422 invalid_input rescue and writes no line.
+- Line format: 'source=<bdl|osm|model> error=<class> message="<message>" elapsed_ms=<integer>'.
+- Privacy: the line never holds coordinates, a bbox, a URL, a query, the session id, or the request body.
+  SourceLog removes each URL (http:// or https:// up to the next space) from the message.
+  It replaces each decimal number with "<num>". A decimal number is an optional minus sign, digits, a dot or a comma, and digits.
+  Integers, such as HTTP status codes, stay. SourceLog replaces each control character, such as a line break, with a space.
+  It escapes each double quote as \". Then it cuts the message to 200 characters. One failure always gives exactly one line.
+  The session id never enters the message. The app flow test checks this with the session cookie set, not through the scrub.
+- Config/puma.rb stays as is: Puma in the foreground writes stderr to the terminal.
+- The response bodies stay the same. No new locale key.
+- This replaces the round-2 D4 (rack.errors line 'BDL incomplete: <message>').
 
 ADR 0009 records D1: "Read BDL pages by offset, not by next links".
 Reason: the BDL server builds next links from the reduced numberMatched. A later reader will want to restore next links.
 
 ## Tasks (in order)
 
-S2-0. backend-developer: commit this plan as docs/plans/bdl-offset-pagination.md and ADR docs/decisions/0009-bdl-offset-pagination.md.
-  Also update docs/plans/local-mvp.md (the repeated-link line) and docs/data-sources.md (the page model) to point to ADR 0009.
-S2-1. tester: failing tests. Scope test/unit/bdl/, test/fixtures/ogc/, test/unit/app_test.rb.
+The unit suite command is ruby test/run.rb --unit.
+
+S2-0. backend-developer: commit this plan and ADR 0009. Done and landed (74548cc).
+S2-1. tester (task 59296b4a): failing tests for D1 to D3. Scope test/unit/bdl/, test/fixtures/ogc/, test/unit/app_test.rb.
   - Fixtures in the live shape: decreasing numberMatched, no next link after the early stop.
   - A three-page read with page size 1 and T = 3 returns three features at offsets 0, 1, 2.
   - A wrong numberMatched on a later page raises 'count changed'. A short page raises 'count mismatch'.
   - T above the limit raises 'feature limit' after one request.
   - The requests do not follow a next link to another host.
   - The selector deadline starts after the search: a fake search that advances the clock still leaves 29 s.
-  - The app logs the Incomplete message to rack.errors.
   - D2: a fake transport counts requests in flight under a mutex. With concurrency 4 and 6 later pages, the maximum in flight is above 1 and at most 4.
-    Each fake request blocks until a second request arrives (Queue or ConditionVariable), so the test is deterministic.
   - D2: an error on one later page raises Incomplete. After the read, no thread that the read started is alive.
   - Fake transports return bodies keyed by the offset param, not by call order.
   - D3 uses the App setting clock. A fake search advances the fake clock. The selector deadline equals the clock after the search plus 29.
   - Update the existing pagination fixtures and tests that assume a constant numberMatched.
   - The tests fail on main only for the missing behavior, not for load or syntax errors outside the new API.
-  - Acceptance also: bundle exec rubocop test/unit/bdl test/unit/app_test.rb reports 0 offenses.
-S2-2. backend-developer: fix. Scope lib/bdl/page_state.rb, lib/bdl/page_reader.rb, lib/bdl/client.rb, lib/app.rb.
-  Input: the tester branch. Acceptance: the tester tests pass, ruby test/run.rb passes,
-  bundle exec rubocop lib test and bundle exec reek lib report 0 offenses,
-  and a live run of the reproduction search returns a result with 5481 Warsaw stands.
-  A live POST /api/card for the same search returns HTTP 200 with a card. Record the times.
-  The live run is mandatory. It also proves that offset works together with f=json.
-S3. reviewer: review the fix branch (with the tester commits).
+  - The rack.errors log test is removed. L1 owns the log tests.
+  - Acceptance: rubocop on the test files reports 0 offenses.
+L1. tester: failing tests for D4. Runs in parallel with S2-1. Scope test/unit/source_log_test.rb, test/unit/app_log_test.rb, test/unit/osm/.
+  - SourceLog writes the exact line format. It removes a URL and replaces decimal numbers. Integers stay. It cuts long messages.
+  - A message with a line break and a double quote gives one line with a space and an escaped quote.
+  - App: a fake search that raises BDL::Incomplete gives 502 and exactly one bdl line with the fake clock elapsed time.
+  - App: a fake model that raises Model::Deadline gives 504 and one model line. Model::Invalid gives 502 and one model line.
+  - App: a fake model that raises SystemCallError gives 502 and one model line.
+  - App: BDL::NoCoverage gives 422 and no line.
+  - App wiring: the OSM client that configure builds uses the same SourceLog as settings.source_log.
+  - App: a successful card writes no line.
+  - OSM: a transport error gives nil and one osm line with the fake clock elapsed time. A good response writes no line.
+  - Privacy: the fake error messages hold the request lat and lon, a URL with a bbox, and a query with decimals.
+    The test asserts that none of these reach the line. The app test sets the session cookie and asserts that the session id is absent.
+  - Acceptance: bundle exec rubocop on the L1 test files reports 0 offenses.
+    ruby test/run.rb --unit loads all files. The L1 tests fail on the goal head only for the missing behavior.
+L2. backend-developer: implement D4. Scope lib/source_log.rb, lib/app.rb, lib/osm/client.rb, docs/plans/bdl-offset-pagination.md.
+  Acceptance: the L1 tests pass. ruby test/run.rb --unit passes. bundle exec rubocop lib test and bundle exec reek lib report 0 offenses.
+  Inputs: the L1 branch. Update the committed plan copy to this revision.
+  L2 adds the App setting clock (the D3 seam), because L2 lands before S2-2. S2-2 moves the deadline start only.
+  Live: start the app on the goal head without the fix. POST /api/card for lat 52.078247, lon 21.040624, radius 20 km.
+  Record the stderr line in $COORD_DIR/artifacts/c0e3a4e7/repro-log.md. The expected line: source=bdl error=BDL::Incomplete message="count changed".
+R1. reviewer: review L1 and L2.
+S2-2. backend-developer: fix D1 to D3. After L2 lands, because both edit lib/app.rb.
+  Scope lib/bdl/page_state.rb, lib/bdl/page_reader.rb, lib/bdl/client.rb, lib/app.rb. Inputs: the S2-1 branch.
+  Acceptance: the S2-1 and L1 tests pass. ruby test/run.rb --unit passes. bundle exec rubocop lib test and bundle exec reek lib report 0 offenses.
+  Live: the same Warsaw search returns 5481 Warsaw stands. With the stub model (config/model.yml default), POST /api/card returns HTTP 200 with a card.
+  An error is allowed only with a live Ollama model, and its stderr line must name the reason. Record the times and any log lines.
+S3. reviewer: review S2-2 with the S2-1 commits.
 
 ## Out of scope
 

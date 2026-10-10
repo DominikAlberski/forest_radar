@@ -5,24 +5,53 @@ require 'digest'
 require_relative '../http/transport'
 
 module OSM
+  # Reads relations and logs failed reads.
+  module LoggedRelations
+    def relations(bbox:, deadline: nil)
+      started = @clock.call
+      read_relations(bbox, deadline)
+    rescue JSON::ParserError, HTTP::Error, ArgumentError, KeyError, TypeError => error
+      log_failure(error, started)
+    end
+
+    private
+
+    def read_relations(bbox, deadline)
+      query = self.class.query_for(bbox)
+      key = Digest::SHA256.hexdigest([Client::ENDPOINT, query].join('\0'))
+      @cache&.read(key) || fetch_relations(query, key, deadline)
+    end
+
+    def log_failure(error, started)
+      return unless @log
+
+      elapsed = ((@clock.call - started) * 1000).round
+      write_log(error, elapsed)
+    end
+
+    def write_log(error, elapsed)
+      @log.write(source: :osm, error: error, elapsed_ms: elapsed)
+      nil
+    rescue StandardError
+      nil
+    end
+  end
+
   # Reads and validates hiking route relations from Overpass.
   class Client
+    include LoggedRelations
+
     ENDPOINT = ENV.fetch('FOREST_RADAR_OVERPASS_URL', 'https://overpass-api.de')
     ATTRIBUTION = '© OpenStreetMap contributors'
     COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright'
 
     def initialize(transport: HTTP::Transport.new(base_url: ENDPOINT, user_agent: 'forest_radar/1.0',
-                                                  timeout: 25, retries: 1), cache: nil)
+                                                  timeout: 25, retries: 1), cache: nil, log: nil,
+                   clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
       @transport = transport
       @cache = cache
-    end
-
-    def relations(bbox:, deadline: nil)
-      query = self.class.query_for(bbox)
-      key = Digest::SHA256.hexdigest([ENDPOINT, query].join('\0'))
-      @cache&.read(key) || fetch_relations(query, key, deadline)
-    rescue JSON::ParserError, HTTP::Error, ArgumentError, KeyError, TypeError
-      nil
+      @log = log
+      @clock = clock
     end
 
     def self.query_for(box)
@@ -55,7 +84,7 @@ module OSM
     end
 
     def load_relations(query, deadline)
-      cutoff = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 25
+      cutoff = @clock.call + 25
       body = @transport.get('/api/interpreter', params: { data: query },
                                                 deadline: deadline ? [deadline, cutoff].min : cutoff)
       parse_elements(body).map { |item| parse_relation(item) }
