@@ -79,7 +79,8 @@ module ForestRadar
       search = settings.search_cache.fetch([session, lat, lon, radius, 'card']) do
         settings.search_client.search(lat: lat, lon: lon, radius_km: radius)
       end
-      walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius))
+      walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius),
+                                      deadline: deadline)
       facts = Assembler::Facts.new.build(search, walk)
       lines = Assembler::Facts.new.lines(facts)
       advice = settings.model_client.generate(lines, deadline: deadline)
