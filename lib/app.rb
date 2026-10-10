@@ -77,11 +77,11 @@ module ForestRadar
     post '/api/card' do
       content_type :json
       lat, lon, radius = CardInput.new(parse_input).values
-      deadline = settings.clock + 29
       session = session_id
       search = logged_source(:bdl) do
         search_for(session, lat, lon, radius)
       end
+      deadline = settings.clock + 29
       walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius),
                                       deadline: deadline)
       facts = Assembler::Facts.new.build(search, walk)

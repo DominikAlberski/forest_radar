@@ -5,13 +5,15 @@ require 'bdl/client'
 
 class ClientParallelPaginationTest < Minitest::Test
   class ConcurrentReplay
+    BLOCKED_OFFSETS = (2..4)
     PEER_WAIT_SECONDS = 0.25
 
     attr_reader :calls, :maximum, :threads
 
-    def initialize(pages, error_offset: nil)
+    def initialize(pages, error_offset: nil, blocking_offsets: [])
       @pages = pages
       @error_offset = error_offset
+      @blocking_offsets = blocking_offsets
       initialize_state
     end
 
@@ -36,7 +38,13 @@ class ClientParallelPaginationTest < Minitest::Test
     def get(path, params:, deadline:)
       offset = params.fetch('offset', '0').to_i
       enter(path, params, deadline, offset)
+      response(offset)
+    ensure
       leave
+    end
+
+    def response(offset)
+      block_request(offset) if @blocking_offsets.include?(offset)
       raise IOError, 'page failed' if offset == @error_offset
 
       @pages.fetch(offset)
@@ -74,6 +82,14 @@ class ClientParallelPaginationTest < Minitest::Test
       end
     end
 
+    def block_request(offset)
+      @mutex.synchronize do
+        @condition.broadcast
+        @condition.wait(@mutex, PEER_WAIT_SECONDS)
+      end
+      @mutex.synchronize { @calls << [:released, offset] }
+    end
+
     def leave
       @mutex.synchronize { @in_flight -= 1 }
     end
@@ -106,7 +122,40 @@ class ClientParallelPaginationTest < Minitest::Test
     refute transport.threads.any?(&:alive?)
   end
 
+  def test_first_later_page_error_joins_workers_even_when_other_pages_block
+    transport = blocked_transport
+
+    error = assert_raises(BDL::Incomplete) { read(transport) }
+
+    assert_equal 'page failed', error.message
+    refute transport.threads.any?(&:alive?), 'read returned while a worker was alive'
+  end
+
+  def test_first_error_returns_before_blocked_workers_finish_and_stops_new_requests
+    transport = blocked_transport
+
+    error = assert_raises(BDL::Incomplete) { read(transport) }
+
+    assert_equal 'page failed', error.message
+    refute_block_released(transport)
+    refute_page_requested(transport, '5')
+  end
+
   def read(transport)
     client(transport).features('rdlp', bbox: [0, 0, 1, 1])
+  end
+
+  def blocked_transport
+    ConcurrentReplay.new(pages(10), error_offset: 1,
+                                    blocking_offsets: ConcurrentReplay::BLOCKED_OFFSETS)
+  end
+
+  def refute_block_released(transport)
+    refute_includes transport.calls, [:released, 2], 'blocked worker finished before read raised'
+  end
+
+  def refute_page_requested(transport, offset)
+    requested = transport.calls.any? { |call| call[1].is_a?(Hash) && call[1]['offset'] == offset }
+    refute requested, 'read started an offset after the first error'
   end
 end
