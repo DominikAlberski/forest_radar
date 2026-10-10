@@ -82,7 +82,8 @@ class ClientParallelPaginationTest < Minitest::Test
   def pages(count)
     (0...count).to_h do |offset|
       remaining = count - offset
-      [offset, { numberMatched: remaining, features: [{ id: offset }], links: [] }.to_json]
+      [offset, { numberMatched: remaining,
+                 features: [{ id: offset, properties: {} }], links: [] }.to_json]
     end
   end
 

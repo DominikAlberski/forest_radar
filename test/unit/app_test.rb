@@ -17,9 +17,9 @@ module AppTestHelpers
   end
 
   def request_card_between_times
-    before = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    before = @clock.call
     card
-    after = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    after = @clock.call
     assert_equal 200, last_response.status
     [before, after]
   end

@@ -5,15 +5,15 @@ require 'bdl/client'
 
 class ClientTest < Minitest::Test
   class FakeTransport
-    attr_reader :paths
+    attr_reader :calls
 
     def initialize(pages)
       @pages = pages
-      @paths = []
+      @calls = []
     end
 
     def get(path, params:, **)
-      @paths << [path, params]
+      @calls << [path, params.dup]
       @pages.fetch(path).shift.to_json
     end
   end
@@ -22,17 +22,26 @@ class ClientTest < Minitest::Test
     { 'id' => identifier, 'type' => 'Feature', 'geometry' => nil, 'properties' => properties }
   end
 
-  def page(items, matched:, next_url: nil)
-    links = next_url ? [{ 'rel' => 'next', 'href' => next_url }] : []
-    { 'features' => items, 'numberMatched' => matched, 'links' => links }
+  def page(items, matched:)
+    { 'features' => items, 'numberMatched' => matched, 'links' => [] }
   end
 
   def test_follows_pages_and_detects_mismatch
-    path = '/collections/rdlp/items'
-    pages = { path => [page([feature(1)], matched: 2, next_url: "https://ogcapi.bdl.lasy.gov.pl#{path}?offset=1"),
-                       page([feature(2)], matched: 2)] }
-    client = BDL::Client.new(transport: FakeTransport.new(pages))
+    transport = two_page_transport
+    client = BDL::Client.new(transport: transport, page_size: 1)
     assert_equal([1, 2], client.features('rdlp', bbox: [0, 0, 1, 1]).map { |item| item['id'] })
+    assert_offsets transport
+  end
+
+  def two_page_transport
+    path = '/collections/rdlp/items'
+    pages = { path => [page([feature(1)], matched: 2), page([feature(2)], matched: 1)] }
+    FakeTransport.new(pages)
+  end
+
+  def assert_offsets(transport)
+    offsets = transport.calls.map { |call| call[1].fetch('offset') }
+    assert_equal %w[0 1], offsets
   end
 
   def test_rejects_incomplete_count
