@@ -86,6 +86,8 @@ The server keeps source answers in memory, per browser session cookie. The limit
 
 - Each BDL forest receives a separate card and a separate model description.
 - Each model request receives only the summary for that forest.
+- Each model request also receives that forest's retrieved OpenStreetMap trail evidence and evidence status.
+- The Maps link identifies the forest location. The link does not verify a walking route.
 - The card shows the complete model response, an AI hallucination disclaimer, and the mushroom warning.
 - A BDL retrieval failure, a model failure, or a missing region gives an error message and no card.
 - OpenStreetMap trail selection remains in the API facts. The card does not show the source fact tables.

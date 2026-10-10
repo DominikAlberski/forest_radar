@@ -2,6 +2,7 @@
 
 require_relative 'builder'
 require_relative 'forest_links'
+require_relative 'trail_evidence'
 require_relative '../assembler/facts'
 require_relative '../model/request_queue'
 
@@ -14,9 +15,10 @@ module Card
       @queue = queue
     end
 
-    def build(search, location)
+    def build(search, location, walk: {})
+      evidence = TrailEvidence.new(walk)
       search.fetch(:ranges).sort_by { |range| range.fetch('distance_km') }.map do |range|
-        forest_card(forest_search(search, range), location)
+        forest_card(forest_search(search, range), location, evidence.for(range))
       end
     end
 
@@ -29,11 +31,11 @@ module Card
                    box_stand_count: stands.size, radius_stand_count: stands.size, missing_identifier_count: 0)
     end
 
-    def forest_card(search, location)
+    def forest_card(search, location, evidence)
       assembler = Assembler::Facts.new
-      advice = model_advice(assembler.model_lines(search))
+      advice = model_advice(assembler.model_lines(search, walking: evidence))
       card = Builder.new.build(facts: {}, advice: advice, **location)
-      card.merge(forests: ForestLinks.new.build(search), name: forest_name(search))
+      card.merge(forests: ForestLinks.new.build(search), name: forest_name(search), walking: evidence)
     end
 
     def forest_name(search)

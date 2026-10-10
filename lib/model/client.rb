@@ -13,7 +13,12 @@ module Model
   class Client
     PROMPT = 'Co możesz dodatkowo powiedzieć o tym lesie na podstawie danych z BDL? ' \
              'Interesujące nas informacje to powierzchnia lasu, dostępność dla spacerowiczów, ' \
-             'możliwe do napotkania zwierzęta, rośliny i grzyby.'
+             'możliwe do napotkania zwierzęta, rośliny i grzyby. ' \
+             'Dane o szlakach pochodzą z OpenStreetMap przez Overpass. ' \
+             'Status mapped_crossing oznacza szlak przecinający las, no_mapped_trail — brak takiego szlaku w danych, ' \
+             'trail_unavailable — niedostępne dane, not_checked — las poza sprawdzonym obszarem. ' \
+             'Brak danych nie oznacza braku szlaków w terenie. ' \
+             'Link Google Maps wskazuje lokalizację lasu, nie zweryfikowaną trasę spaceru.'
 
     # Runs one request within a deadline.
     Generation = Struct.new(:deadline, :request, :clock) do

@@ -87,7 +87,7 @@ module ForestRadar
       walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius),
                                       deadline: deadline)
       facts = Assembler::Facts.new.build(search, walk)
-      cards = logged_source(:model) { build_cards(search, lat, lon) }
+      cards = logged_source(:model) { build_cards(search, { lat: lat, lon: lon }, walk) }
       JSON.generate(facts: facts, cards: cards, card: cards.first, sanepid_url: cards.first&.fetch(:sanepid_url))
     rescue TypeError, ArgumentError
       halt 422, CardError.new('invalid_input').json
@@ -103,9 +103,9 @@ module ForestRadar
 
     private
 
-    def build_cards(search, lat, lon)
+    def build_cards(search, location, walk)
       collection = Card::Collection.new(model: settings.model_client, clock: -> { settings.clock })
-      collection.build(search, { lat: lat, lon: lon })
+      collection.build(search, location, walk: walk)
     end
 
     def search_for(session, lat, lon, radius)

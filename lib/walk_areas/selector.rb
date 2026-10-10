@@ -54,7 +54,8 @@ module WalkAreas
     def to_h
       eligible, excluded = selected.partition { |range| !range[:exclusion_reason] }
       areas = eligible.sort_by { |item| AreaOrder.new(item).key }.first(3)
-      { areas: areas, excluded: excluded, trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
+      { areas: areas, excluded: excluded, evidence: selected,
+        trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
         attribution_url: OSM::Client::COPYRIGHT_URL }
     end
   end

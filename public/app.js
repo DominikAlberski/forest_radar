@@ -53,6 +53,11 @@ function renderCard(card) {
     maps.append(item);
   });
   if (maps.childElementCount) description.append(maps);
+  if (card.walking) {
+    const attribution = node('a', words.osm_attribution);
+    attribution.href = 'https://www.openstreetmap.org/copyright';
+    description.append(attribution);
+  }
   const safety = section(article, words.safety_title);
   safety.append(node('p', card.warning));
   const station = document.createElement('a');

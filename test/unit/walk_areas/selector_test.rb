@@ -65,6 +65,7 @@ class WalkAreaSelectorTest < Minitest::Test
 
   def assert_selected_order(result)
     assert_equal([1, 2, 3], result[:areas].map { |item| item['id'] })
+    assert_equal [1, 2, 3, 4], result[:evidence].map { |item| item['id'] }.sort
   end
 
   def assert_trail_metadata(result)

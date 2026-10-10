@@ -7,6 +7,10 @@ Send BDL forest summaries with one Polish question about forest area, walking ac
 Include all BDL forest ranges in the model input, even when OpenStreetMap has no trail evidence.
 Make one Ollama request per BDL forest to the configured Bielik model.
 Send only that forest's stands and district in each request.
+Include that forest's retrieved OpenStreetMap trail names, references, route types, and evidence status.
+Keep evidence for all checked forests, including forests outside the three-item trail shortlist.
+Distinguish missing mapped trails, unavailable evidence, and unchecked forests.
+Tell the model that the Maps link identifies a location rather than a verified walking route.
 Show each forest in a separate card with its own Google Maps link.
 Give each model request its own deadline.
 Use one shared FIFO model queue for browser searches in the server process.
