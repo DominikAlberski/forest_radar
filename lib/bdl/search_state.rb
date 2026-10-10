@@ -2,6 +2,7 @@
 
 require_relative 'geometry_validation'
 require_relative 'result_builder'
+require_relative 'phase_reads'
 
 module BDL
   # Holds the shared deadline, item budget, and collections for one search.
@@ -15,21 +16,29 @@ module BDL
     def search(client, clock)
       load_area(client)
       verify_coverage(clock)
-      self.stands = selected_collections.flat_map { |name| stand_pairs(client, name) }
+      self.stands = stand_pairs(phase(client, selected_collections))
       finish(clock)
     end
 
     def load_area(client)
-      self.regions = read(client, 'rdlp')
-      self.districts = read(client, 'nadlesnictwa')
-      self.ranges = read(client, 'lesnictwa')
+      area = phase(client, %w[rdlp nadlesnictwa lesnictwa])
+      self.regions = area.fetch('rdlp')
+      self.districts = area.fetch('nadlesnictwa')
+      self.ranges = area.fetch('lesnictwa')
     end
 
     def read(client, collection)
       items = client.features(collection, bbox: bbox, deadline: deadline, limit: remaining)
       GeometryValidation.validate(items)
-      self.remaining -= items.size
       items
+    end
+
+    def phase(client, names)
+      results = PhaseReads.new(self, client, names).read
+      self.remaining -= results.values.sum(&:size)
+      raise Incomplete, 'feature limit' if remaining.negative?
+
+      results
     end
 
     def verify_coverage(clock)
@@ -57,8 +66,12 @@ module BDL
       "RDLP_#{name}_wydzielenia" if name
     end
 
-    def stand_pairs(client, name)
-      read(client, name).map { |item| [name, item] }
+    def stand_pairs(collections)
+      collections.flat_map { |name, items| self.class.pairs_for(name, items) }
+    end
+
+    def self.pairs_for(name, items)
+      items.map { |item| [name, item] }
     end
 
     def finish(clock)

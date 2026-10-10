@@ -9,6 +9,7 @@ require_relative '../http/transport'
 require_relative 'result_builder'
 require_relative 'page_reader'
 require_relative 'search_state'
+require_relative 'search_transport'
 
 module BDL
   # Reports an incomplete BDL response.
@@ -45,7 +46,9 @@ module BDL
     end
 
     def search(lat:, lon:, radius_km:)
-      SearchState.start(lat, lon, radius_km, @clock).search(self, @clock)
+      transport = SearchTransport.new(@transport, @concurrency)
+      reader = self.class.new(transport: transport, clock: @clock, page_size: @page_size, concurrency: @concurrency)
+      SearchState.start(lat, lon, radius_km, @clock).search(reader, @clock)
     end
   end
 end

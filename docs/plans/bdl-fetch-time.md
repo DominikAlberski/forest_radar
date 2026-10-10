@@ -91,3 +91,17 @@ Do not change the radius or other options without a user decision.
 Run d was skipped. Run c had a page larger than 8 MiB.
 
 These measurements replace the timing figure in ADR 0009.
+
+## Option A: parallel collection reads
+
+The search now starts the first pages of all collections in one phase together.
+One request cap of 8 applies to both first and later pages across the search.
+The coverage check still separates the area phase from the stand phase.
+
+| Run | Total s | Collection first/parallel s | Requests | Largest page bytes | Stop sign |
+| --- | ---: | --- | ---: | ---: | --- |
+| 1 | 16.12 | rdlp: 6.52/0.00; nadlesnictwa: 7.11/0.00; lesnictwa: 3.69/0.00; RDLP_Radom_wydzielenia: 1.58/0.00; RDLP_Warszawa_wydzielenia: 3.72/4.62 | 10 | 10292906 | none |
+| 2 | 17.16 | rdlp: 6.27/0.00; nadlesnictwa: 4.34/0.00; lesnictwa: 5.95/0.00; RDLP_Radom_wydzielenia: 1.32/0.00; RDLP_Warszawa_wydzielenia: 5.54/4.68 | 10 | 10292906 | none |
+
+Both runs used the Warsaw search, page size 1000, concurrency 8, and transport retries 0.
+The runs had a 20-second pause. The probe found no stop sign.
