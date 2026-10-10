@@ -69,13 +69,13 @@ class ClientPaginationTest < Minitest::Test
 
   def test_later_count_must_equal_total_minus_offset
     error = assert_raises(BDL::Incomplete) do
-      read({ 0 => fixture('rdlp-page1.json'), 1 => fixture('rdlp-page2-count-changed.json') })
+      read({ 0 => fixture('rdlp-page1.json'), 1 => fixture('rdlp-page2-count-changed.json'), 2 => page(1, 3) })
     end
     assert_equal 'count changed', error.message
   end
 
   def test_short_page_is_a_count_mismatch
-    pages = { 0 => page(3, 1), 1 => { numberMatched: 2, features: [], links: [] }.to_json }
+    pages = { 0 => page(3, 1), 1 => { numberMatched: 2, features: [], links: [] }.to_json, 2 => page(1, 3) }
     error = assert_raises(BDL::Incomplete) { read(pages) }
     assert_equal 'count mismatch', error.message
   end
