@@ -2,6 +2,7 @@
 
 require_relative '../../test_helper'
 require 'walk_areas/selector'
+require_relative '../../system/support/fixtures'
 
 class WalkAreaSelectorTest < Minitest::Test
   class Trails
@@ -9,7 +10,9 @@ class WalkAreaSelectorTest < Minitest::Test
       @relations = relations
     end
 
-    def relations(**)
+    def relations(bbox:, deadline:)
+      @bbox = bbox
+      @deadline = deadline
       @relations
     end
   end
@@ -38,6 +41,26 @@ class WalkAreaSelectorTest < Minitest::Test
     result = select(ranges, relations: [0.01, 0.02, 0.03, 0.04].map { |x| relation(x) })
     assert_selected_order(result)
     assert_trail_metadata(result)
+  end
+
+  def test_trails_keyword_names_match_osm_client
+    assert_equal keyword_names(OSM::Client, :relations), keyword_names(Trails, :relations)
+  end
+
+  def test_system_trail_fake_keyword_names_match_osm_client
+    assert_equal keyword_names(OSM::Client, :relations), keyword_names(SystemFixtures::Trails, :relations)
+  end
+
+  def test_system_walk_fake_keyword_names_match_selector
+    expected = keyword_names(WalkAreas::Selector, :select)
+    actual = keyword_names(SystemFixtures::Walk, :select)
+    assert_equal expected, actual
+  end
+
+  def keyword_names(klass, method_name)
+    klass.instance_method(method_name).parameters.filter_map do |kind, name|
+      name if %i[key keyreq keyrest].include?(kind)
+    end
   end
 
   def assert_selected_order(result)

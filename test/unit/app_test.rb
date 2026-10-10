@@ -4,8 +4,36 @@ require_relative '../test_helper'
 require 'rack/test'
 require 'app'
 
+module AppTestHelpers
+  def assert_trail_keyword_names
+    expected = keyword_names(OSM::Client, :relations)
+    actual = keyword_names(AppTest::Trails, :relations)
+    assert_equal expected, actual
+  end
+
+  def assert_deadline_bounds(before, after)
+    deadline = @trails.deadline
+    assert(deadline && before + 29 <= deadline && deadline <= after + 29)
+  end
+
+  def request_card_between_times
+    before = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    card
+    after = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    assert_equal 200, last_response.status
+    [before, after]
+  end
+
+  def keyword_names(klass, method_name)
+    klass.instance_method(method_name).parameters.filter_map do |kind, name|
+      name if %i[key keyreq keyrest].include?(kind)
+    end
+  end
+end
+
 class AppTest < Minitest::Test
   include Rack::Test::Methods
+  include AppTestHelpers
 
   HOST = { 'CONTENT_TYPE' => 'application/json', 'HTTP_HOST' => 'localhost' }.freeze
   SQUARE = { 'type' => 'Polygon', 'coordinates' => [[[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]] }.freeze
@@ -60,7 +88,11 @@ class AppTest < Minitest::Test
   end
 
   class Trails
-    def relations(**)
+    attr_reader :bbox, :deadline
+
+    def relations(bbox:, deadline:)
+      @bbox = bbox
+      @deadline = deadline
       [{ id: 1, name: 'Szlak', ref: 'T', route: 'hiking', ways: [[[-0.001, 0.005], [0.011, 0.005]]] }]
     end
   end
@@ -78,7 +110,7 @@ class AppTest < Minitest::Test
   def setup
     @saved = %i[search_client selector model_client search_cache].to_h { |key| [key, app.settings.public_send(key)] }
     app.set :search_cache, Cache::SearchCache.new
-    app.set :selector, WalkAreas::Selector.new(trails: Trails.new)
+    app.set :selector, WalkAreas::Selector.new(trails: (@trails = Trails.new))
     use_model(EchoHTTP.new('Sprawdź szlak przed wyjściem.'), 'configured.example')
     app.set :search_client, Search.new
   end
@@ -125,6 +157,11 @@ class AppTest < Minitest::Test
     body = JSON.parse(last_response.body)
     assert_equal 200, last_response.status
     assert_card_body(body)
+  end
+
+  def test_card_passes_its_deadline_to_the_selector
+    assert_trail_keyword_names
+    assert_deadline_bounds(*request_card_between_times)
   end
 
   def assert_card_body(body)

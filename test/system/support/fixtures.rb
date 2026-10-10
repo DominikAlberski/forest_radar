@@ -62,7 +62,9 @@ module SystemFixtures
       @relations = relations
     end
 
-    def relations(**)
+    def relations(bbox:, deadline:)
+      @bbox = bbox
+      @deadline = deadline
       @relations
     end
   end
@@ -73,8 +75,9 @@ module SystemFixtures
       @areas = areas
     end
 
-    def select(search:, **)
+    def select(search:, area:, deadline:)
       raise ArgumentError, 'search data is required' unless search
+      raise ArgumentError, 'area and deadline are required' unless area && deadline
 
       { areas: @areas.map { |area| area.merge('distance_km' => area['distance_km']) }, excluded: [],
         trail_source: 'OpenStreetMap', attribution: OSM::Client::ATTRIBUTION,
