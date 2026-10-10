@@ -38,7 +38,8 @@ module AppTestHelpers
 
   def configure_clock
     @clock = AppTestClock.new(Process.clock_gettime(Process::CLOCK_MONOTONIC))
-    app.set :clock, -> { @clock.call }
+    clock = @clock
+    app.set :clock, -> { clock.call }
   end
 
   def configure_dependencies
