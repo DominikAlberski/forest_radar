@@ -56,7 +56,8 @@ module AppLogSupport
       @clock.advance_ms(125)
       raise @error if @error
 
-      { ranges: [], districts: [], stands: [], box_stand_count: 0,
+      { ranges: [{ 'id' => 1, 'distance_km' => 1, 'properties' => { 'name' => 'Las testowy' } }],
+        districts: [], stands: [], box_stand_count: 0,
         radius_stand_count: 0, missing_identifier_count: 0 }
     end
   end

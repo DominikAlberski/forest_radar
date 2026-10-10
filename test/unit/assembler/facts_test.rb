@@ -47,6 +47,14 @@ class FactsTest < Minitest::Test
     assert_equal 'Jabłonna', facts[:districts].first[:name]
   end
 
+  def test_model_input_includes_bdl_ranges_without_trail_evidence
+    search = linked_search.merge(ranges: linked_walk.fetch(:areas).map { |area| area.except(:trails) })
+    values = Assembler::Facts.new.model_lines(search).values
+    assert_includes values, 'areas[0].stand_count=1'
+    assert_includes values, 'areas[0].species.SO=1'
+    refute(values.any? { |value| value.start_with?('trail_source=') })
+  end
+
   def live_name_search
     { stands: [], districts: [{ 'id' => 2, 'properties' => { 'inspectorate_name' => 'Jabłonna' } }],
       box_stand_count: 0, radius_stand_count: 0, missing_identifier_count: 0 }

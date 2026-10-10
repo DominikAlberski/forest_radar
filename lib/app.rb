@@ -11,6 +11,8 @@ require_relative 'osm/client'
 require_relative 'assembler/facts'
 require_relative 'model/client'
 require_relative 'card/builder'
+require_relative 'card/forest_links'
+require_relative 'card/collection'
 require_relative 'source_log'
 
 module ForestRadar
@@ -81,14 +83,12 @@ module ForestRadar
       search = logged_source(:bdl) do
         search_for(session, lat, lon, radius)
       end
-      deadline = settings.clock + 29
+      deadline = settings.clock + 89
       walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius),
                                       deadline: deadline)
       facts = Assembler::Facts.new.build(search, walk)
-      lines = Assembler::Facts.new.lines(facts)
-      advice = logged_source(:model) { settings.model_client.generate(lines, deadline: deadline) }
-      card = Card::Builder.new.build(facts: facts, advice: advice, lat: lat, lon: lon)
-      JSON.generate(facts: facts, card: card, sanepid_url: card[:sanepid_url])
+      cards = logged_source(:model) { build_cards(search, lat, lon) }
+      JSON.generate(facts: facts, cards: cards, card: cards.first, sanepid_url: cards.first&.fetch(:sanepid_url))
     rescue TypeError, ArgumentError
       halt 422, CardError.new('invalid_input').json
     rescue BDL::NoCoverage
@@ -102,6 +102,11 @@ module ForestRadar
     end
 
     private
+
+    def build_cards(search, lat, lon)
+      collection = Card::Collection.new(model: settings.model_client, clock: -> { settings.clock })
+      collection.build(search, { lat: lat, lon: lon })
+    end
 
     def search_for(session, lat, lon, radius)
       settings.search_cache.fetch([session, lat, lon, radius, 'card']) do
