@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../../test_helper'
+require 'geo/geometry'
 
 # Tests geometry bounds and box overlap.
 class GeometryBBoxTest < Minitest::Test
