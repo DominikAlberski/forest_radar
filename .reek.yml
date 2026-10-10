@@ -1,0 +1,12 @@
+detectors:
+  LongParameterList:
+    # Match the four-parameter limit used by RuboCop.
+    max_params: 4
+  UncommunicativeParameterName:
+    # Geometry formulas use conventional one-letter coordinates and coefficients.
+    accept:
+      - '^(x|y|a|b|t)$'
+  UncommunicativeVariableName:
+    # Geometry formulas use conventional one-letter coordinates and coefficients.
+    accept:
+      - '^(x|y|a|b|t)$'

@@ -1,0 +1,50 @@
+{
+    "type":"FeatureCollection",
+    "features":[
+        {
+            "type":"Feature",
+            "properties":{
+                "region_name":"\u0141\u00d3D\u0179",
+                "region_cd":"06",
+                "a_year":2026
+            },
+            "id":6,
+            "geometry":null
+        }
+    ],
+    "numberMatched":2,
+    "numberReturned":1,
+    "links":[
+        {
+            "type":"application/geo+json",
+            "rel":"self",
+            "title":"This document as GeoJSON",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/rdlp/items?f=json&bbox=20.6,52.25,20.8,52.35&limit=1&skipGeometry=true"
+        },
+        {
+            "rel":"alternate",
+            "type":"application/ld+json",
+            "title":"This document as RDF (JSON-LD)",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/rdlp/items?f=jsonld&bbox=20.6,52.25,20.8,52.35&limit=1&skipGeometry=true"
+        },
+        {
+            "type":"text/html",
+            "rel":"alternate",
+            "title":"This document as HTML",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/rdlp/items?f=html&bbox=20.6,52.25,20.8,52.35&limit=1&skipGeometry=true"
+        },
+        {
+            "type":"application/geo+json",
+            "rel":"next",
+            "title":"items (next)",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/rdlp/items?offset=1&bbox=20.6,52.25,20.8,52.35&limit=1&skipGeometry=true"
+        },
+        {
+            "type":"application/json",
+            "title":"RDLP",
+            "rel":"collection",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/rdlp/items"
+        }
+    ],
+    "timeStamp":"2026-10-08T19:17:40.348024Z"
+}

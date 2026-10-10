@@ -1,0 +1,70 @@
+{
+    "type":"FeatureCollection",
+    "features":[
+        {
+            "type":"Feature",
+            "properties":{
+                "adress_forest":"06-18- -  -      -    -",
+                "inspectorate_name":"Skierniewice",
+                "inspectorate_cd":"18",
+                "a_year":2026,
+                "region_cd":"06"
+            },
+            "id":196,
+            "geometry":null
+        },
+        {
+            "type":"Feature",
+            "properties":{
+                "adress_forest":"17-02- -  -      -    -",
+                "inspectorate_name":"Chojn\u00f3w",
+                "inspectorate_cd":"02",
+                "a_year":2026,
+                "region_cd":"17"
+            },
+            "id":398,
+            "geometry":null
+        },
+        {
+            "type":"Feature",
+            "properties":{
+                "adress_forest":"17-05- -  -      -    -",
+                "inspectorate_name":"Jab\u0142onna",
+                "inspectorate_cd":"05",
+                "a_year":2026,
+                "region_cd":"17"
+            },
+            "id":401,
+            "geometry":null
+        }
+    ],
+    "numberMatched":3,
+    "numberReturned":3,
+    "links":[
+        {
+            "type":"application/geo+json",
+            "rel":"self",
+            "title":"This document as GeoJSON",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/nadlesnictwa/items?f=json&bbox=20.6,52.25,20.8,52.35&limit=10&skipGeometry=true"
+        },
+        {
+            "rel":"alternate",
+            "type":"application/ld+json",
+            "title":"This document as RDF (JSON-LD)",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/nadlesnictwa/items?f=jsonld&bbox=20.6,52.25,20.8,52.35&limit=10&skipGeometry=true"
+        },
+        {
+            "type":"text/html",
+            "rel":"alternate",
+            "title":"This document as HTML",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/nadlesnictwa/items?f=html&bbox=20.6,52.25,20.8,52.35&limit=10&skipGeometry=true"
+        },
+        {
+            "type":"application/json",
+            "title":"Nadle\u015bnictwa",
+            "rel":"collection",
+            "href":"https://ogcapi.bdl.lasy.gov.pl/collections/nadlesnictwa/items"
+        }
+    ],
+    "timeStamp":"2026-10-08T19:17:40.451313Z"
+}
