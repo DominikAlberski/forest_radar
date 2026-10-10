@@ -57,8 +57,7 @@ Zasady:
    Nie używaj słów "jadalny", "niejadalny", "trujący".
    Podaj tylko możliwe gatunki.
 2. Nie zgaduj, jeśli danych nie ma. Napisz "brak danych".
-3. Podaj odległość i szacowany czas dojścia.
-4. Napisz krótko. Maksymalnie 250 słów.
+3. Napisz krótko. Maksymalnie 250 słów.
 ```
 
 ### User message
@@ -79,9 +78,13 @@ The program builds the fact block. The fact block holds the stands that matter, 
 The box for a 10 km radius can hold thousands of stands. Do not send them all. Reduce the block:
 
 - Group by district.
-- Keep the three largest stands per district.
+- Summarize stands in the displayed forest ranges.
 - Keep the dominant species and the dominant site type.
 - Report the counts, not every row.
+
+Each model fact line uses `F<id>: <value>`. The application checks every line against the fact block.
+The application rejects the full answer when a line is absent, changed, or added.
+The word checks can detect known phrases. They cannot prove complete semantic safety.
 
 ## The mushroom rule
 
@@ -140,7 +143,7 @@ Known risks to record:
 
 - The model names a mushroom for a site type where that mushroom does not grow.
 - The model ignores the edibility rule and writes "jadalny".
-- The model states an entry rule that the ban layer does not support.
+- The model states an entry rule without source evidence.
 - The model invents a district name.
 - The model reports a dog rule as a fact, when the rule depends on the district and the season.
 

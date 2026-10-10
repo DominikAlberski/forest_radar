@@ -1,0 +1,21 @@
+{
+ "displayFieldName": "inv_nr",
+ "fieldAliases": {
+  "tur_line_cd": "tur_line_cd"
+ },
+ "fields": [
+  {
+   "name": "tur_line_cd",
+   "type": "esriFieldTypeString",
+   "alias": "tur_line_cd",
+   "length": 10
+  }
+ ],
+ "features": [
+  {
+   "attributes": {
+    "tur_line_cd": "SC KONNA"
+   }
+  }
+ ]
+}
