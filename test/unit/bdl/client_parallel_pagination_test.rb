@@ -33,6 +33,7 @@ class ClientParallelPaginationTest < Minitest::Test
     def initialize_mutex
       @mutex = Mutex.new
       @condition = ConditionVariable.new
+      @blocked_condition = ConditionVariable.new
     end
 
     def get(path, params:, deadline:)
@@ -83,11 +84,23 @@ class ClientParallelPaginationTest < Minitest::Test
     end
 
     def block_request(offset)
-      @mutex.synchronize do
-        @condition.broadcast
-        @condition.wait(@mutex, PEER_WAIT_SECONDS)
-      end
+      wait_until_block_deadline
       @mutex.synchronize { @calls << [:released, offset] }
+    end
+
+    def wait_until_block_deadline
+      deadline = monotonic_now + PEER_WAIT_SECONDS
+      @mutex.synchronize { wait_while_blocked(deadline) }
+    end
+
+    def wait_while_blocked(deadline)
+      while (remaining = deadline - monotonic_now).positive?
+        @blocked_condition.wait(@mutex, remaining)
+      end
+    end
+
+    def monotonic_now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
     def leave
@@ -135,7 +148,6 @@ class ClientParallelPaginationTest < Minitest::Test
     transport = blocked_transport
 
     error = assert_raises(BDL::Incomplete) { read(transport) }
-
     assert_equal 'page failed', error.message
     refute_block_released(transport)
     refute_page_requested(transport, '5')
