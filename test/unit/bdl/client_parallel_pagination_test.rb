@@ -5,6 +5,8 @@ require 'bdl/client'
 
 class ClientParallelPaginationTest < Minitest::Test
   class ConcurrentReplay
+    PEER_WAIT_SECONDS = 0.25
+
     attr_reader :calls, :maximum, :threads
 
     def initialize(pages, error_offset: nil)
@@ -68,7 +70,7 @@ class ClientParallelPaginationTest < Minitest::Test
     def wait_for_peer
       @mutex.synchronize do
         @condition.broadcast
-        @condition.wait(@mutex, 0.25) while @requests_seen < 2
+        @condition.wait(@mutex, PEER_WAIT_SECONDS) if @requests_seen < 2
       end
     end
 
