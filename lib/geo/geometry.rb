@@ -13,6 +13,19 @@ module Geo
       [lon - delta_lon, lat - delta_lat, lon + delta_lon, lat + delta_lat]
     end
 
+    def bounds(geometry) = PreparedGeometry.merge_boxes(prepare(geometry).map(&:first))
+
+    def boxes_overlap?(first_box, second_box)
+      return false unless first_box && second_box
+
+      first_box[0] <= second_box[2] && second_box[0] <= first_box[2] &&
+        first_box[1] <= second_box[3] && second_box[1] <= first_box[3]
+    end
+
+    def prepare(geometry) = PreparedGeometry.prepare(geometry)
+
+    def prepared_intersects?(first, second) = PreparedGeometry.intersects?(first, second)
+
     def project(point, origin)
       lat, lon = origin
       scale = Math::PI * EARTH_KM / 180
@@ -123,6 +136,103 @@ module Geo
 
     def crosses_any_ring?(ring, other_rings)
       other_rings.any? { |other| edges_cross?(ring, other) }
+    end
+
+    # Stores polygon rings and edges for repeated intersection checks.
+    # :reek:NestedIterators
+    # :reek:DataClump
+    # :reek:TooManyStatements
+    module PreparedGeometry
+      module_function
+
+      def prepare(geometry)
+        Geometry.polygons(geometry).map { |rings| prepare_polygon(rings) }
+      end
+
+      def prepare_polygon(rings)
+        prepared = rings.map { |ring| prepare_ring(ring) }
+        [merge_boxes(prepared.map(&:first)), prepared]
+      end
+
+      def prepare_ring(points)
+        edges = points.each_cons(2).map { |first, last| [edge_box(first, last), first, last] }
+        [merge_boxes(edges.map(&:first)), points, edges]
+      end
+
+      def edge_box(first, last)
+        first_x, first_y = first
+        last_x, last_y = last
+        [[first_x, last_x].min, [first_y, last_y].min,
+         [first_x, last_x].max, [first_y, last_y].max]
+      end
+
+      def merge_boxes(boxes)
+        boxes = boxes.compact
+        return nil if boxes.empty?
+
+        columns = boxes.transpose
+        [columns[0].min, columns[1].min, columns[2].max, columns[3].max]
+      end
+
+      def intersects?(first, second)
+        first.any? do |left_polygon|
+          second.any? { |right_polygon| polygon_intersects?(left_polygon, right_polygon) }
+        end
+      end
+
+      def polygon_intersects?(first, second)
+        return false unless Geometry.boxes_overlap?(first[0], second[0])
+
+        first[1][0][1].any? { |point| contains?(second, point) } ||
+          second[1][0][1].any? { |point| contains?(first, point) } || edges_intersect?(first, second)
+      end
+
+      def contains?(polygon, point)
+        rings = polygon[1]
+        positions = rings.map { |ring| ring_position(ring, point) }
+        return true if positions.include?(:boundary)
+
+        positions.first == :inside && positions.drop(1).none?(:inside)
+      end
+
+      def ring_position(ring, point)
+        return :outside unless point_in_box?(point, ring[0])
+
+        crossings = catch(:boundary) { ring[2].count { |edge| ray_crossing?(edge, point) } }
+        return :boundary if crossings == :boundary
+
+        crossings.odd? ? :inside : :outside
+      end
+
+      def ray_crossing?(edge, point)
+        box, first, last = edge
+        throw :boundary, :boundary if point_in_box?(point, box) && Geometry.on_segment?(point, first, last)
+
+        Geometry.ray_crosses?(point, first, last)
+      end
+
+      def point_in_box?(point, box)
+        return false unless box
+
+        point[0].between?(box[0], box[2]) && point[1].between?(box[1], box[3])
+      end
+
+      def edges_intersect?(first, second)
+        first[1].any? do |left_ring|
+          second[1].any? { |right_ring| rings_cross?(left_ring, right_ring) }
+        end
+      end
+
+      def rings_cross?(first_ring, second_ring)
+        return false unless Geometry.boxes_overlap?(first_ring[0], second_ring[0])
+
+        first_ring[2].any? { |edge| second_ring[2].any? { |other| edge_cross?(edge, other) } }
+      end
+
+      def edge_cross?(first, second)
+        Geometry.boxes_overlap?(first[0], second[0]) &&
+          Geometry.crossing?(first[1], first[2], second[1], second[2])
+      end
     end
   end
 end

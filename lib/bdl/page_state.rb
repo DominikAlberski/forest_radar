@@ -1,71 +1,59 @@
 # frozen_string_literal: true
 
-require 'uri'
 require_relative 'page_payload'
 
 module BDL
-  # Tracks pagination requests, collected features, and count limits.
-  class PageState < Struct.new(:path, :params, :seen, :features, :matched, :deadline, :limit, keyword_init: true)
+  # Tracks page counts and collected features.
+  class PageState < Struct.new(:path, :params, :features, :matched, :deadline, :limit, :page_size, keyword_init: true)
     PAGE_SIZE = 1000
 
-    def self.start(collection, bbox, deadline, limit)
-      new(path: "/collections/#{collection}/items", params: { bbox: bbox.join(','), limit: PAGE_SIZE, f: 'json' },
-          seen: {}, features: [], matched: nil, deadline: deadline, limit: limit)
+    def self.start(collection, bbox, deadline, options)
+      limit = options.fetch(:limit)
+      page_size = options.fetch(:page_size, PAGE_SIZE)
+      new(path: "/collections/#{collection}/items",
+          params: { bbox: bbox.join(','), limit: page_size, f: 'json', 'offset' => '0' },
+          features: [], matched: nil, deadline: deadline, limit: limit, page_size: page_size)
     end
 
-    def record_request
-      key = [path, params.sort].inspect
-      raise Incomplete, 'repeated page' if seen[key]
-
-      seen[key] = true
-    end
-
-    def fetch(transport, clock)
-      record_request
-      page = PagePayload.parse(transport.get(path, params: params, deadline: deadline))
+    def fetch(transport, clock, offset)
+      page = PagePayload.parse(transport.get(path, params: params.merge('offset' => offset.to_s), deadline: deadline))
       raise Incomplete, 'deadline exceeded' if clock.call >= deadline
 
       page
     end
 
-    def add(page)
-      update_count(page['numberMatched'])
-      append_features(page.fetch('features'))
+    def add(page, offset)
+      validate(page, offset)
+      features.concat(page.fetch('features'))
     end
 
-    def update_count(count)
+    def validate(page, offset)
+      count = page['numberMatched']
       raise Incomplete, 'missing count' unless count.is_a?(Integer)
 
-      self.matched ||= count
-      raise Incomplete, 'count changed' unless matched == count
+      self.matched ||= count + offset
+      raise Incomplete, 'count changed' unless count == matched - offset
+
+      validate_items(page.fetch('features'), offset)
     end
 
-    def append_features(items)
-      raise Incomplete, 'feature limit' if features.size + items.size > limit
-
-      features.concat(items)
+    def validate_items(items, offset)
+      raise Incomplete, 'feature limit' if matched > limit
+      raise Incomplete, 'count mismatch' unless items.size == [page_size, matched - offset].min
     end
 
-    def follow_link?(page)
-      link = page.fetch('links').find { |entry| entry['rel'] == 'next' }
-      return false unless link
-
-      update_request(URI(link.fetch('href')))
-      true
+    def offsets
+      (page_size...matched).step(page_size).to_a
     end
 
-    def update_request(uri)
-      raise Incomplete, 'foreign page' unless uri.host == 'ogcapi.bdl.lasy.gov.pl'
-
-      self.path = uri.path
-      self.params = URI.decode_www_form(uri.query || '').to_h
+    def add_pages(pages)
+      offsets.each { |offset| features.concat(pages.fetch(offset).fetch('features')) }
     end
 
     def finish
-      current_features = features
-      raise Incomplete, 'count mismatch' if matched && matched != current_features.length
+      raise Incomplete, 'count mismatch' unless matched == features.length
 
-      current_features
+      features
     end
   end
 end

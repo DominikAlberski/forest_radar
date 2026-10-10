@@ -28,13 +28,17 @@ module BDL
                      '16' => 'Radom', '17' => 'Warszawa' }.freeze
     def initialize(transport: HTTP::Transport.new(base_url: 'https://ogcapi.bdl.lasy.gov.pl',
                                                   user_agent: 'ForestRadar/1.0', retries: 2),
-                   clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
+                   clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) },
+                   page_size: 1000, concurrency: 4)
       @transport = transport
       @clock = clock
+      @page_size = page_size
+      @concurrency = concurrency
     end
 
     def features(collection, bbox:, deadline: @clock.call + 60, limit: 100_000)
-      PageReader.new(@transport, @clock).read(collection, bbox: bbox, deadline: deadline, limit: limit)
+      PageReader.new(@transport, @clock, page_size: @page_size, concurrency: @concurrency)
+                .read(collection, bbox: bbox, deadline: deadline, limit: limit)
     rescue JSON::ParserError, KeyError, TypeError, ArgumentError, HTTP::Error, URI::InvalidURIError,
            Timeout::Error, IOError, SocketError, SystemCallError, OpenSSL::SSL::SSLError => error
       raise Incomplete, error.message

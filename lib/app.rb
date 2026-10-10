@@ -11,6 +11,7 @@ require_relative 'osm/client'
 require_relative 'assembler/facts'
 require_relative 'model/client'
 require_relative 'card/builder'
+require_relative 'source_log'
 
 module ForestRadar
   # Parses and checks the coordinates in one card request.
@@ -62,7 +63,9 @@ module ForestRadar
       set :public_folder, File.expand_path('../public', __dir__)
       set :search_client, BDL::Client.new
       set :search_cache, Cache::SearchCache.new
-      set :selector, WalkAreas::Selector.new(trails: OSM::Client.new)
+      set :clock, -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+      set :source_log, SourceLog.new
+      set :selector, WalkAreas::Selector.new(trails: OSM::Client.new(log: source_log))
       set :model_client, Model::Client.from_config
     end
 
@@ -74,16 +77,16 @@ module ForestRadar
     post '/api/card' do
       content_type :json
       lat, lon, radius = CardInput.new(parse_input).values
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 29
       session = session_id
-      search = settings.search_cache.fetch([session, lat, lon, radius, 'card']) do
-        settings.search_client.search(lat: lat, lon: lon, radius_km: radius)
+      search = logged_source(:bdl) do
+        search_for(session, lat, lon, radius)
       end
+      deadline = settings.clock + 29
       walk = settings.selector.select(search: search, area: WalkAreas::Area.new(lat: lat, lon: lon, radius_km: radius),
                                       deadline: deadline)
       facts = Assembler::Facts.new.build(search, walk)
       lines = Assembler::Facts.new.lines(facts)
-      advice = settings.model_client.generate(lines, deadline: deadline)
+      advice = logged_source(:model) { settings.model_client.generate(lines, deadline: deadline) }
       card = Card::Builder.new.build(facts: facts, advice: advice, lat: lat, lon: lon)
       JSON.generate(facts: facts, card: card, sanepid_url: card[:sanepid_url])
     rescue TypeError, ArgumentError
@@ -99,6 +102,31 @@ module ForestRadar
     end
 
     private
+
+    def search_for(session, lat, lon, radius)
+      settings.search_cache.fetch([session, lat, lon, radius, 'card']) do
+        settings.search_client.search(lat: lat, lon: lon, radius_km: radius)
+      end
+    end
+
+    def logged_source(source)
+      started = settings.clock
+      yield
+    rescue BDL::Incomplete, Model::Deadline, Model::Invalid, IOError, SystemCallError, Timeout::Error => error
+      log_failure(source, error, started)
+      raise
+    end
+
+    def log_failure(source, error, started)
+      elapsed = ((settings.clock - started) * 1000).round
+      write_log(source, error, elapsed)
+    end
+
+    def write_log(source, error, elapsed)
+      settings.source_log.write(source: source, error: error, elapsed_ms: elapsed)
+    rescue StandardError
+      nil
+    end
 
     def parse_input
       input = JSON.parse(request.body.read)

@@ -25,7 +25,9 @@ The stand collections are split by region. Region ids: `Bialystok`, `Katowice`, 
 GET https://ogcapi.bdl.lasy.gov.pl/collections/RDLP_Warszawa_wydzielenia/items?bbox=20.6,52.25,20.8,52.35&limit=2&f=json
 ```
 
-The bounding box order is `lon,lat,lon,lat` in CRS84. `limit=2` returns two features. `numberMatched` gives the full count for the box.
+The bounding box order is `lon,lat,lon,lat` in CRS84. `limit=2` returns two features.
+Read pages with explicit offsets. The first page's `numberMatched` gives the full count for the box.
+Later pages report the count minus the offset. See [ADR 0009](decisions/0009-bdl-offset-pagination.md).
 
 ### Verified sample response
 

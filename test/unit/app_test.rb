@@ -17,9 +17,9 @@ module AppTestHelpers
   end
 
   def request_card_between_times
-    before = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    before = @clock.call
     card
-    after = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    after = @clock.call
     assert_equal 200, last_response.status
     [before, after]
   end
@@ -28,6 +28,41 @@ module AppTestHelpers
     klass.instance_method(method_name).parameters.filter_map do |kind, name|
       name if %i[key keyreq keyrest].include?(kind)
     end
+  end
+
+  def save_settings
+    @saved = %i[search_client selector model_client search_cache].to_h do |key|
+      [key, app.settings.public_send(key)]
+    end
+  end
+
+  def configure_clock
+    @clock = AppTestClock.new(Process.clock_gettime(Process::CLOCK_MONOTONIC))
+    clock = @clock
+    app.set :clock, -> { clock.call }
+  end
+
+  def configure_dependencies
+    app.set :search_cache, Cache::SearchCache.new
+    app.set :selector, WalkAreas::Selector.new(trails: (@trails = AppTest::Trails.new))
+    use_model(AppTest::EchoHTTP.new('Sprawdź szlak przed wyjściem.'), 'configured.example')
+    app.set :search_client, AppTest::Search.new
+  end
+end
+
+class AppTestClock
+  attr_reader :now
+
+  def initialize(now)
+    @now = now
+  end
+
+  def call
+    @now
+  end
+
+  def advance(seconds)
+    @now += seconds
   end
 end
 
@@ -62,11 +97,13 @@ class AppTest < Minitest::Test
   end
 
   class Search
-    def initialize(error = nil)
+    def initialize(error = nil, clock: nil)
       @error = error
+      @clock = clock
     end
 
     def search(**)
+      @clock&.advance(11)
       raise @error if @error
 
       { ranges: ranges, districts: districts, stands: stands,
@@ -108,15 +145,14 @@ class AppTest < Minitest::Test
   end
 
   def setup
-    @saved = %i[search_client selector model_client search_cache].to_h { |key| [key, app.settings.public_send(key)] }
-    app.set :search_cache, Cache::SearchCache.new
-    app.set :selector, WalkAreas::Selector.new(trails: (@trails = Trails.new))
-    use_model(EchoHTTP.new('Sprawdź szlak przed wyjściem.'), 'configured.example')
-    app.set :search_client, Search.new
+    save_settings
+    configure_clock
+    configure_dependencies
   end
 
   def teardown
     @saved.each { |key, value| app.set key, value }
+    app.set :clock, -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
   end
 
   def use_model(http, host)
@@ -202,5 +238,13 @@ class AppTest < Minitest::Test
     assert_equal key, body['error']
     refute_includes body, 'card'
     refute_includes body, 'facts'
+  end
+end
+
+class AppDeadlineTest < AppTest
+  def test_selector_deadline_starts_after_the_search
+    app.set :search_client, Search.new(nil, clock: @clock)
+    card
+    assert_equal @clock.call + 29, @trails.deadline
   end
 end

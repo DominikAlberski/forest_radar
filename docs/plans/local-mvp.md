@@ -74,7 +74,7 @@ If any limit prevents a complete required source read, return HTTP 502 with the 
 Retry a BDL request at most two times after a timeout, a connection error, or a 5xx status.
 Wait 0.5 seconds before the first retry and 1 second before the second retry. Never retry a 4xx status.
 Retries count against the 60-second search budget.
-Detect repeated pagination links, malformed pages, and declared count mismatches.
+Read BDL pages by offset. Detect malformed pages and declared count mismatches. See [ADR 0009](../decisions/0009-bdl-offset-pagination.md).
 Deduplicate stands by collection plus a_i_num, then collection plus adr_for.
 If both identifiers are absent, use a canonical geometry and property digest and report the missing identifier.
 Preserve species_cd, site_type, spec_age, sub_area, a_year, forest address, and district identity.
