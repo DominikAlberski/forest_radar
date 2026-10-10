@@ -89,7 +89,7 @@ module BDL
 
   # Reads collection pages within one deadline and item limit.
   class PageReader
-    def initialize(transport, clock, page_size: 1000, concurrency: 4)
+    def initialize(transport, clock, page_size: PageState::PAGE_SIZE, concurrency: PageState::CONCURRENCY)
       @transport = transport
       @clock = clock
       @page_size = page_size

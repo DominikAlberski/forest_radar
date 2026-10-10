@@ -6,6 +6,7 @@ module BDL
   # Tracks page counts and collected features.
   class PageState < Struct.new(:path, :params, :features, :matched, :deadline, :limit, :page_size, keyword_init: true)
     PAGE_SIZE = 1000
+    CONCURRENCY = 8
 
     def self.start(collection, bbox, deadline, options)
       limit = options.fetch(:limit)
