@@ -29,7 +29,7 @@ module BDL
     def initialize(transport: HTTP::Transport.new(base_url: 'https://ogcapi.bdl.lasy.gov.pl',
                                                   user_agent: 'ForestRadar/1.0', retries: 2),
                    clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) },
-                   page_size: 1000, concurrency: 4)
+                   page_size: PageState::PAGE_SIZE, concurrency: PageState::CONCURRENCY)
       @transport = transport
       @clock = clock
       @page_size = page_size
