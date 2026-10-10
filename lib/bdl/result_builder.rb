@@ -68,6 +68,11 @@ module BDL
       address.start_with?(prefix) && Geo::Geometry.intersects?(source['geometry'], candidate['geometry'])
     end
 
+    def self.full_prefix?(item, address, width)
+      prefix = item.dig('properties', 'adress_forest').to_s
+      prefix.length >= width && address.length >= width && address.start_with?(prefix[0, width])
+    end
+
     def self.in_radius?(context, stand)
       Geo::Geometry.intersects_circle?(stand['geometry'], context.lat, context.lon, context.radius)
     end
@@ -128,7 +133,19 @@ module BDL
     def stand_match(collection, label, stand, prefix_width)
       address = stand.dig('properties', 'adr_for').to_s
       matches = @match_index.candidates(collection, prefix_width, address)
+      exact = exact_stand_match(matches, address, prefix_width)
+      return exact if exact
+
+      spatial_stand_match(matches, label, stand)
+    end
+
+    def spatial_stand_match(matches, label, stand)
       unique_match(matches, label, stand) { |item| @match_index.spatial_match?(stand, item) }
+    end
+
+    def exact_stand_match(matches, address, width)
+      exact = matches.select { |item| self.class.full_prefix?(item, address, width) }
+      exact.first if exact.one?
     end
 
     def stand_attributes(context, stand_entry, district, range)
