@@ -49,7 +49,7 @@ class ClientSearchCoverageTest < Minitest::Test
   def assert_paths(fake)
     expected = %w[rdlp nadlesnictwa lesnictwa RDLP_Warszawa_wydzielenia RDLP_Lodz_wydzielenia]
                .map { |name| collection(name) }
-    assert_equal expected, fake.paths
+    assert_equal expected.sort, fake.paths.sort
   end
 
   def assert_counts(result)

@@ -9,6 +9,7 @@ require_relative '../http/transport'
 require_relative 'result_builder'
 require_relative 'page_reader'
 require_relative 'search_state'
+require_relative 'search_transport'
 
 module BDL
   # Reports an incomplete BDL response.
@@ -29,7 +30,7 @@ module BDL
     def initialize(transport: HTTP::Transport.new(base_url: 'https://ogcapi.bdl.lasy.gov.pl',
                                                   user_agent: 'ForestRadar/1.0', retries: 2),
                    clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) },
-                   page_size: 1000, concurrency: 4)
+                   page_size: PageState::PAGE_SIZE, concurrency: PageState::CONCURRENCY)
       @transport = transport
       @clock = clock
       @page_size = page_size
@@ -45,7 +46,9 @@ module BDL
     end
 
     def search(lat:, lon:, radius_km:)
-      SearchState.start(lat, lon, radius_km, @clock).search(self, @clock)
+      transport = SearchTransport.new(@transport, @concurrency)
+      reader = self.class.new(transport: transport, clock: @clock, page_size: @page_size, concurrency: @concurrency)
+      SearchState.start(lat, lon, radius_km, @clock).search(reader, @clock)
     end
   end
 end

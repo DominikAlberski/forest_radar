@@ -12,7 +12,7 @@ module Card
 
     def build(facts:, advice:, lat:, lon:)
       { facts: facts, advice: advice, warning: @translator.t('card.mushroom_warning'),
-        access_warning: @translator.t('card.access_warning'), sanepid_label: @translator.t('card.sanepid_label'),
+        disclaimer: @translator.t('card.disclaimer'), sanepid_label: @translator.t('card.sanepid_label'),
         sanepid_url: Sanepid.url(lat, lon, template: @translator.t('card.sanepid_url_template')) }
     end
   end

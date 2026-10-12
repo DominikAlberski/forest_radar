@@ -2,7 +2,6 @@
 
 require_relative '../test_helper'
 require 'yaml'
-require 'model/validator'
 
 class LocalesTest < Minitest::Test
   ROOT = File.expand_path('../../config/locales', __dir__)
@@ -38,10 +37,7 @@ class LocalesTest < Minitest::Test
     assert_includes pl.fetch('card').fetch('mushroom_warning'), 'nie zbieraj grzyba'
   end
 
-  def test_fixed_text_makes_no_access_or_edibility_promise
-    leaves(pl).each do |path, value|
-      refute_match Model::Validator::ACCESS, value.to_s, path
-      refute_match Model::Validator::PROHIBITED, value.to_s, path
-    end
+  def test_description_disclaimer_mentions_hallucinations
+    assert_includes pl.fetch('card').fetch('disclaimer'), 'halucynacje'
   end
 end

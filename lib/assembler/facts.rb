@@ -129,5 +129,11 @@ module Assembler
     def lines(facts)
       @node.new(facts, '').entries.each_with_index.to_h { |(key, value), index| ["F#{index + 1}", "#{key}=#{value}"] }
     end
+
+    def model_lines(search, walking: {})
+      walk = { areas: search.fetch(:ranges).map { |range| range.merge(trails: []) },
+               trail_source: nil, attribution: nil, attribution_url: nil }
+      lines(build(search, walk).slice(:areas, :districts, :radius_stand_count).merge(walking: walking))
+    end
   end
 end

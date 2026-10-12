@@ -1,5 +1,12 @@
 # The model and the prompts
 
+The current card contract is [ADR 0010](decisions/0010-unvalidated-walk-description.md).
+The app sends BDL summaries with one Polish question to Bielik through Ollama.
+The app displays the complete answer without content validation or content retries.
+The card shows an AI hallucination disclaimer and the fixed mushroom warning.
+The sections below describe the earlier design.
+ADR 0010 replaces their output format and validation requirements.
+
 ## The model
 
 Default: **Bielik**, served by Ollama on the local network.

@@ -1,7 +1,7 @@
 pl:
   card:
     mushroom_warning: "Zbieranie grzybów, których nie znasz, może zagrażać zdrowiu i życiu. Jeśli masz wątpliwości, nie zbieraj grzyba. Możesz też zanieść go do najbliższej stacji sanitarno-epidemiologicznej. Grzyboznawca sprawdzi go bezpłatnie."
-    access_warning: "Przed spacerem sprawdź aktualne zasady wstępu do lasu."
+    disclaimer: "Opis został wygenerowany przez AI i może zawierać halucynacje oraz błędy."
     sanepid_label: "Sprawdź grzyby u grzyboznawcy"
     sanepid_url_template: "https://www.google.com/maps/search/stacja+sanitarno-epidemiologiczna/@%{lat},%{lon},11z"
   errors:
@@ -21,10 +21,12 @@ pl:
     locate: "Użyj mojej lokalizacji"
     search: "Przygotuj kartę"
     print: "Drukuj kartę"
-    card_title: "Karta spaceru"
+    card_title: "Karty spaceru"
     facts_title: "Dane źródłowe"
     facts_intro: "Dane opisują wybrane miejsca i nie potwierdzają warunków na całej trasie."
-    advice_title: "Wskazówki modelu"
+    advice_title: "Opis lasu"
+    forest: "Las"
+    forest_map: "Otwórz w Google Maps: %{name}"
     safety_title: "Bezpieczeństwo"
     loading: "Pobieram dane i przygotowuję kartę…"
     ready: "Karta jest gotowa."
@@ -35,8 +37,7 @@ pl:
     location_unavailable: "Lokalizacja nie jest dostępna. Możesz wpisać współrzędne ręcznie."
     unavailable: "brak danych"
     more_count: "i jeszcze %{count}"
-    print_omitted: "[pominięto dalszą część]"
-    no_areas: "Brak wybranych obszarów leśnych. Dane o szlakach mogą być niedostępne; nie oznacza to braku szlaku w terenie."
+    no_areas: "Brak lasów do opisania w danych dla tej lokalizacji."
     trails: "Szlaki"
     trail_unknown: "Brak potwierdzonych danych o szlakach"
     unnamed_trail: "Szlak bez nazwy"

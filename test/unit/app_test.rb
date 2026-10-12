@@ -13,7 +13,7 @@ module AppTestHelpers
 
   def assert_deadline_bounds(before, after)
     deadline = @trails.deadline
-    assert(deadline && before + 29 <= deadline && deadline <= after + 29)
+    assert(deadline && before + 89 <= deadline && deadline <= after + 89)
   end
 
   def request_card_between_times
@@ -73,7 +73,7 @@ class AppTest < Minitest::Test
   HOST = { 'CONTENT_TYPE' => 'application/json', 'HTTP_HOST' => 'localhost' }.freeze
   SQUARE = { 'type' => 'Polygon', 'coordinates' => [[[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]] }.freeze
 
-  # Recorded Ollama stand-in: echoes the received fact lines, then appends the given advice.
+  # Returns the prepared model response.
   class EchoHTTP
     Response = Struct.new(:code, :body)
     attr_reader :hosts, :bodies
@@ -91,8 +91,7 @@ class AppTest < Minitest::Test
 
     def post(_path, body, _headers)
       @bodies << body
-      facts = JSON.parse(body)['messages'].last['content'].delete_prefix("FAKTY\n")
-      Response.new('200', JSON.generate(message: { content: "FAKTY\n#{facts}\nWNIOSKI\n#{@advice}" }))
+      Response.new('200', JSON.generate(message: { content: @advice }))
     end
   end
 
@@ -207,6 +206,13 @@ class AppTest < Minitest::Test
     assert_includes body['sanepid_url'], '0.005'
   end
 
+  def test_card_links_to_the_bdl_forest_location
+    card
+    forest = JSON.parse(last_response.body).fetch('card').fetch('forests').first
+    assert_equal 'Las testowy', forest.fetch('name')
+    assert_equal 'https://www.google.com/maps/search/?api=1&query=0%2C0', forest.fetch('url')
+  end
+
   def test_error_responses_hold_no_card
     cases = { 'no_coverage' => [BDL::NoCoverage, 422], 'source' => [BDL::Incomplete, 502] }
     cases.each { |key, (klass, status)| assert_search_error(key, klass, status) }
@@ -219,11 +225,16 @@ class AppTest < Minitest::Test
     assert_error key
   end
 
-  def test_invalid_model_output_returns_model_error_without_card
+  def test_unrestricted_model_output_is_served_unchanged
     use_model(EchoHTTP.new('Ten grzyb jest jadalny.'), 'configured.example')
     card
-    assert_equal 502, last_response.status
-    assert_error 'model'
+    assert_equal 200, last_response.status
+    assert_unrestricted_description(JSON.parse(last_response.body).fetch('card'))
+  end
+
+  def assert_unrestricted_description(card)
+    assert_equal 'Ten grzyb jest jadalny.', card['advice']
+    assert_includes card['disclaimer'], 'halucynacje'
   end
 
   def test_expired_model_deadline_returns_504_without_card
@@ -245,6 +256,6 @@ class AppDeadlineTest < AppTest
   def test_selector_deadline_starts_after_the_search
     app.set :search_client, Search.new(nil, clock: @clock)
     card
-    assert_equal @clock.call + 29, @trails.deadline
+    assert_equal @clock.call + 89, @trails.deadline
   end
 end

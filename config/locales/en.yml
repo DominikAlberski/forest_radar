@@ -1,7 +1,7 @@
 en:
   card:
     mushroom_warning: ""
-    access_warning: ""
+    disclaimer: ""
     sanepid_label: ""
     sanepid_url_template: ""
   errors:
@@ -25,6 +25,8 @@ en:
     facts_title: ""
     facts_intro: ""
     advice_title: ""
+    forest: ""
+    forest_map: ""
     safety_title: ""
     loading: ""
     ready: ""
@@ -35,7 +37,6 @@ en:
     location_unavailable: ""
     unavailable: ""
     more_count: ""
-    print_omitted: ""
     no_areas: ""
     trails: ""
     trail_unknown: ""

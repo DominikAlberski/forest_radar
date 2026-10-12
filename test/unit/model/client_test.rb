@@ -10,157 +10,88 @@ class ModelClientTest < Minitest::Test
   class RecordedHTTP
     attr_reader :calls
 
-    def initialize(body)
-      @body = body
+    def initialize(content, code: '200')
+      @body = JSON.generate(message: { content: content })
+      @code = code
       @calls = []
     end
 
-    def start(host, port, **options)
-      @calls << [host, port, options]
+    def start(_host, _port, **)
       yield self
     end
 
-    def post(path, body, headers)
-      @calls << [path, JSON.parse(body), headers]
-      Response.new('200', @body)
+    def post(path, body, _headers)
+      @calls << [path, JSON.parse(body)]
+      Response.new(@code, @body)
     end
   end
 
   class SlowHTTP < RecordedHTTP
-    def initialize(body, delay)
-      super(body)
-      @delay = delay
-    end
-
-    def start(host, port, **options)
-      sleep @delay
+    def post(*)
+      sleep 0.2
       super
     end
-
-    def post(path, body, headers)
-      sleep @delay
-      super
-    end
-  end
-
-  def test_client_selection_uses_configuration
-    Tempfile.create(['model', '.yml']) do |file|
-      file.write("client: stub\nmodel: test\nurl: http://localhost:11434\n")
-      file.flush
-      assert_instance_of Model::Stub, Model::Client.from_config(file.path)
-    end
-  end
-
-  def test_prompt_does_not_request_generated_distance_or_walking_time
-    refute_match(/podaj odległość|czas dojścia/i, Model::Client::PROMPT)
-  end
-
-  def test_recorded_ollama_response
-    http = RecordedHTTP.new(fixture('valid-response.json'))
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    assert_equal 'Sprawdź warunki w terenie.', client.generate({ 'F1' => 'distance_km=1.2' })
-    assert_equal 'localhost', http.calls.first.first
-    assert_equal '/api/chat', http.calls.last.first
-  end
-
-  def test_invalid_recorded_answer_retries_once
-    fixture = File.read(File.expand_path('../../fixtures/model/invalid-response.json', __dir__))
-    http = RecordedHTTP.new(fixture)
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    assert_raises(Model::Invalid) { client.generate({ 'F1' => 'distance_km=1.2' }) }
-    assert_equal(2, http.calls.count { |item| item.first == '/api/chat' })
-  end
-
-  def test_deadline_bounds_open_and_response_together
-    fixture = File.read(File.expand_path('../../fixtures/model/valid-response.json', __dir__))
-    http = SlowHTTP.new(fixture, 0.02)
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 0.03
-    assert_raises(Model::Deadline) { client.generate({ 'F1' => 'distance_km=1.2' }, deadline: deadline) }
-  end
-
-  def test_expired_deadline_skips_both_attempts
-    http = RecordedHTTP.new('{}')
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    assert_raises(Model::Deadline) { client.generate({}, deadline: 0) }
-    assert_empty http.calls
-  end
-
-  class ScriptedHTTP < RecordedHTTP
-    attr_reader :timeouts
-
-    def initialize(bodies, delay)
-      super(nil)
-      @bodies = bodies
-      @delay = delay
-      @timeouts = []
-    end
-
-    def start(host, port, **options)
-      @timeouts << options[:read_timeout]
-      super
-    end
-
-    def post(path, body, headers)
-      sleep @delay
-      @body = @bodies.shift
-      super
-    end
-  end
-
-  class HangingHTTP < RecordedHTTP
-    attr_reader :finished
-
-    def post(path, body, headers)
-      sleep 0.4
-      @finished = true
-      super
-    end
-  end
-
-  def clock
-    Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  end
-
-  def fixture(name)
-    File.read(File.expand_path("../../fixtures/model/#{name}", __dir__))
   end
 
   def client(http)
     Model::Client.new('http://localhost:11434', 'bielik', http: http)
   end
 
-  def assert_request_stopped(http)
-    sleep 0.5
-    refute http.finished, 'the delayed request kept running after expiry'
+  def test_content_is_preserved_without_validation_or_retry
+    answer = "  **Las**\nLas jest otwarty. Ten grzyb jest jadalny.\n"
+    http = RecordedHTTP.new(answer)
+    assert_equal answer, client(http).generate({ 'F1' => 'species=SO' })
+    assert_equal 1, http.calls.size
   end
 
-  def assert_reduced_timeouts(http)
-    first, second = http.timeouts
-    assert_operator first - second, :>=, 0.08
-    assert_operator second, :<, 5
+  def test_empty_content_is_also_preserved
+    http = RecordedHTTP.new('')
+    assert_equal '', client(http).generate({})
+    assert_equal 1, http.calls.size
   end
 
-  def test_expired_deadline_interrupts_the_delayed_operation
-    http = HangingHTTP.new('{}')
-    started = clock
-    assert_raises(Model::Deadline) { client(http).generate({ 'F1' => 'x=1' }, deadline: started + 0.05) }
-    assert_operator clock - started, :<, 0.3
-    assert_request_stopped(http)
+  def test_request_has_simple_prompt_and_source_data
+    http = RecordedHTTP.new('Opis')
+    client(http).generate({ 'F1' => 'species=SO', 'F2' => 'total_area=1.5' })
+    assert_request(http.calls.first)
   end
 
-  def test_retry_starts_with_reduced_remaining_budget
-    invalid = fixture('invalid-response.json')
-    http = ScriptedHTTP.new([invalid, invalid], 0.1)
-    assert_raises(Model::Invalid) { client(http).generate({ 'F1' => 'x=1' }, deadline: clock + 5) }
-    assert_reduced_timeouts(http)
+  def assert_request(call)
+    path, body = call
+    assert_equal '/api/chat', path
+    assert_equal 'bielik', body.fetch('model')
+    assert_equal [{ 'role' => 'user', 'content' => expected_prompt }], body.fetch('messages')
+    assert_equal false, body.fetch('stream')
   end
 
-  def test_retry_with_little_budget_left_is_cut_off_at_the_deadline
-    invalid = File.read(File.expand_path('../../fixtures/model/invalid-response.json', __dir__))
-    http = ScriptedHTTP.new([invalid, invalid], 0.1)
-    client = Model::Client.new('http://localhost:11434', 'bielik', http: http)
-    assert_raises(Model::Deadline) { client.generate({ 'F1' => 'x=1' }, deadline: clock + 0.15) }
-    assert_operator http.timeouts.last, :<, 0.07
+  def expected_prompt
+    "#{Model::Client::PROMPT}\n\nDane z BDL:\nF1: species=SO\nF2: total_area=1.5"
+  end
+
+  def test_http_failure_is_not_retried
+    http = RecordedHTTP.new('error', code: '500')
+    assert_raises(Model::Invalid) { client(http).generate({}) }
+    assert_equal 1, http.calls.size
+  end
+
+  def test_expired_deadline_skips_request
+    http = RecordedHTTP.new('Opis')
+    assert_raises(Model::Deadline) { client(http).generate({}, deadline: 0) }
+    assert_empty http.calls
+  end
+
+  def test_deadline_interrupts_request
+    http = SlowHTTP.new('Opis')
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 0.03
+    assert_raises(Model::Deadline) { client(http).generate({}, deadline: deadline) }
+    assert_empty http.calls
+  end
+
+  def test_client_selection_uses_configuration
+    Tempfile.create(['model', '.yml']) do |file|
+      file.write("client: stub\nmodel: test\nurl: http://localhost:11434\n")
+      file.flush
+      assert_instance_of Model::Stub, Model::Client.from_config(file.path, env_path: nil)
+    end
   end
 end
